@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "skills": {
+    "android-permissions-security": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "security/android-permissions-security/SKILL.md",
+      "computedHash": "652fc267098be2f42d556305bc18925640ebc7f2a24c907a9d22da5b11647787"
+    },
+    "edge-to-edge": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "system/edge-to-edge/SKILL.md",
+      "computedHash": "954c391ab845f97ce160c04c3944d6c6da3c7ad0385970353b314ee2a3aabea2"
+    },
+    "migrate-xml-views-to-jetpack-compose": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "jetpack-compose/migration/migrate-xml-views-to-jetpack-compose/SKILL.md",
+      "computedHash": "6a4fdd962eb909343fe368b1fcbe12b060f1ce5beac574a0d9a9b25e6d0e9484"
+    },
+    "navigation-3": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "navigation/navigation-3/SKILL.md",
+      "computedHash": "2cb2045011e5aab48331dfcab3c93672f2b12cd065d986b25d67748499c80e05"
+    },
+    "testing-setup": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "testing/testing-setup/SKILL.md",
+      "computedHash": "085b6e1ce264cf5ee9724065ceb22241432f574719f75ccfad8def7184455acd"
+    }
+  }
+}
