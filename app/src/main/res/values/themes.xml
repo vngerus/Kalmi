@@ -1,0 +1,4 @@
+<resources>
+    <!-- Solo para la ventana inicial; la UI usa el tema Compose (ui/theme). -->
+    <style name="Theme.Kalmi" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
