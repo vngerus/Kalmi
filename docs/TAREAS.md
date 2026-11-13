@@ -29,7 +29,25 @@ Guía completa: [kalmi-guia-app.md](kalmi-guia-app.md). Buscar `TODO(colega)` en
 
 Room (5) · Supabase (6) · FCM (7) · BLE real + permisos (8) · servicio en primer plano (9) · WiFi (10) · seguridad (11).
 
-## Convenciones
+## Flujo de trabajo (ramas, commits, PR)
+
+1. Actualizar `main` y crear rama desde ahí:
+   ```
+   git switch main && git pull
+   git switch -c feat/controles
+   ```
+   Prefijos: `feat/` funcionalidad · `fix/` error · `test/` pruebas · `docs/` documentación · `chore/` build/config.
+   Una rama por tarea de la lista de arriba (ej. `feat/controles`, `feat/historial`, `feat/conexion-diagnostico`, `test/repositorio`).
+2. Commits en formato Conventional Commits, en español, sin `Co-Authored-By`:
+   `feat(ui): pantalla Controles con mensajes y brillo`
+3. Antes de abrir el PR, debe pasar:
+   ```
+   ./gradlew :app:assembleDebug :app:testDebugUnitTest
+   ```
+4. Marcar la tarea `[x]` en este archivo dentro del mismo PR.
+5. Push y PR hacia `main`; lo revisa la otra persona antes de hacer merge. Nada de commits directos a `main` salvo arreglos de documentación.
+
+## Convenciones de código
 
 - Pantalla = `XScreen(vm)` (lee StateFlow con `collectAsStateWithLifecycle`) + `XContenido(datos, lambdas)` con `@Preview`.
 - Dominio sin imports de Android/Compose.

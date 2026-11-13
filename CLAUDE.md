@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Before any task (mandatory)
+
+1. Read the task status, branch workflow, and code conventions below (imported from `docs/TAREAS.md`):
+   @docs/TAREAS.md
+2. Read the relevant section of `docs/kalmi-guia-app.md` before writing code for a feature. The section numbers (§) are listed in each `TODO(colega)` and in TAREAS.md.
+3. Work on a branch, never directly on `main`. Follow the commit format in TAREAS.md, and **never add a `Co-Authored-By` trailer**.
+4. Run `./gradlew :app:assembleDebug :app:testDebugUnitTest` before claiming a task is done.
+
 ## Project
 
 Kalmi: Android caregiver app (Kotlin + Jetpack Compose) for a child's emotion device (ESP32-S3). The device sends emotion events and telemetry over BLE (Nordic UART) or, when far away, over WiFi → Supabase → FCM. The full spec lives in `docs/kalmi-guia-app.md`, and section numbers (§) in code comments refer to it. `docs/TAREAS.md` tracks what is done and what is pending.
