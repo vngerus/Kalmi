@@ -53,6 +53,7 @@ Room (5) · Supabase (6) · FCM (7) · BLE real + permisos (8) · servicio en pr
 - Dominio sin imports de Android/Compose.
 - Estado del repo y del simulador se toca solo desde el scope Main (sin locks).
 - Skills Android oficiales en `.claude/skills/` (navigation-3, edge-to-edge, testing-setup, permissions-security, migrate-xml-to-compose).
+- Instrucciones para IA: `AGENTS.md` (Claude Code lo carga vía `CLAUDE.md`).
 
 ## Compilar
 
