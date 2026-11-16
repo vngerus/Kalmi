@@ -21,9 +21,9 @@ Guía completa: [kalmi-guia-app.md](kalmi-guia-app.md). Buscar `TODO(colega)` en
 ## Pendiente — pasos 1–4 de la guía
 
 - [x] **Controles** (§15.3) — `ui/controles/ControlesScreen.kt`
-- [ ] **Historial** (§15.4) — `ui/historial/HistorialScreen.kt`
-- [ ] **Conexión: diagnóstico + panel debug** (§15.5) — `ui/conexion/ConexionScreen.kt`
-- [ ] **Tests del repositorio** (§18) — agregar `kotlinx-coroutines-test`
+- [x] **Historial** (§15.4) — `ui/historial/HistorialScreen.kt`
+- [x] **Conexión: diagnóstico + panel debug** (§15.5) — `ui/conexion/ConexionScreen.kt`
+- [x] **Tests del repositorio** (§18) — agregar `kotlinx-coroutines-test`
 
 ## Después (pasos 5+)
 
