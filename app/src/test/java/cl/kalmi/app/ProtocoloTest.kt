@@ -29,7 +29,4 @@ class ProtocoloTest {
     @Test fun comandoBrilloSeRecorta() {
         assertEquals(Protocolo.firmar("CMD,7,BRI,10"), Protocolo.comando(7, Comando.Brillo(2)))
     }
-
-    // TODO(colega): KalmiRepositoryTest con kotlinx-coroutines-test (guía §18):
-    //   evento duplicado aparece una vez · % pérdida · comando sin OK → SIN_CONFIRMACION
 }
