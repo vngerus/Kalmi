@@ -25,6 +25,21 @@ Guía completa: [kalmi-guia-app.md](kalmi-guia-app.md). Buscar `TODO(colega)` en
 - [x] **Conexión: diagnóstico + panel debug** (§15.5) — `ui/conexion/ConexionScreen.kt`
 - [x] **Tests del repositorio** (§18) — agregar `kotlinx-coroutines-test`
 
+## v2 · Uno + palabras + IA preparada (rama `feat/kalmi-v2-palabras`)
+
+Diseño: `docs/superpowers/specs/2026-11-19-kalmi-uno-palabras-design.md` · Plan: `docs/superpowers/plans/2026-11-19-kalmi-v2-palabras.md`
+
+- [x] Protocolo `PAL` / `CFG,PAL`, vocabulario núcleo + personales, `ReglasInterpretador` con razón y ¿Acertó?
+- [x] Simulador envía palabras · pestaña Palabras · alerta de palabras en Inicio
+- [x] `BleKalmiDevice` (HM-10 / NUS) + permisos + Modo de prueba en Ajustes (cambio en caliente)
+- [x] Rediseño UI: paleta Kalmi Blanco, mascota animada, Acompañar con respuesta sugerida, barra flotante
+- [x] Notificaciones (3 canales) que abren Acompañar
+- [x] Sketches `firmware/kalmi-uno` y `firmware/kalmi-telefono` (compilados para Uno) + guía Tinkercad (artifact)
+- [ ] **Probar BLE real**: Uno + HM-10 + teléfono Android físico
+- [ ] Probar los sketches en Tinkercad (EEPROM y serial entre dos placas)
+- [ ] Ícono de la app (hoy es el de Android por defecto)
+- [ ] Actualizar el informe con la sección "Mejoras v2" (necesita el `.docx`)
+
 ## Después (pasos 5+)
 
 Room (5) · Supabase (6) · FCM (7) · BLE real + permisos (8) · servicio en primer plano (9) · WiFi (10) · seguridad (11).

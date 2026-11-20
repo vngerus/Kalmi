@@ -48,7 +48,11 @@ UI (Compose) → KalmiViewModel → KalmiRepository → KalmiDevice
 ```
 
 - **Wiring** is manual DI in `KalmiApp` (Application). Swapping Fake ↔ BLE is one line there. `KalmiViewModel.Factory` pulls the repository and device from `KalmiApp`.
-- **Protocol** (`domain/Protocolo.kt`): one text line per message, `BODY*XX`, where XX is the XOR checksum in hex. Device → app: `TEL`, `EVT`, `OK`, `BAT`, `CFG`. App → device: `ACK`, `CMD`, `CFG`. Lines with an invalid checksum or format parse to `null` and count as `descartados`.
+- **Protocol** (`domain/Protocolo.kt`): one text line per message, `BODY*XX`, where XX is the XOR checksum in hex. Device → app: `TEL`, `EVT`, `PAL` (1–2 word indices 0–9), `OK`, `BAT`, `CFG`. App → device: `ACK`, `CMD`, `CFG` (incl. `CFG,PAL,i,texto` for personal words 4–9). Lines with an invalid checksum or format parse to `null` and count as `descartados`. `ContratoArduinoTest` pins the exact lines the Arduino sketch prints.
+- **Words (v2)**: `Vocabulario` = fixed core (Quiero, No, Más, Parar) + 6 caregiver-edited personal words (saved in SharedPreferences, pushed to Kalmi on connect). `Interpretador` turns words into a suggestion with its reason; today `ReglasInterpretador`, later an AI implementation swapped in `KalmiApp`. The AI never decides: the caregiver confirms with ¿Acertó?.
+- **Device switching**: `KalmiApp.device` is a `DispositivoConmutable`; Ajustes → Modo de prueba swaps live between `FakeKalmiDevice` and `BleKalmiDevice` (HM-10 profile; NUS ready for ESP32).
+- **Notifications**: `service/Notificador` shows a notification per new alert while the app is in background (3 channels from `domain/Avisos`), tapping opens Acompañar.
+- **Firmware**: `firmware/kalmi-uno` (device) and `firmware/kalmi-telefono` (Tinkercad stand-in for the app). Verify with `arduino-cli compile -b arduino:avr:uno firmware/<sketch>`.
 - **Repository** (`data/KalmiRepository.kt`) holds all link logic. It collects `device.lineas` and:
   - ACKs every `EVT`, including duplicates.
   - Dedupes events by `seq`.
@@ -61,13 +65,14 @@ UI (Compose) → KalmiViewModel → KalmiRepository → KalmiDevice
 
 ## UI conventions
 
-- Navigation is a `Pestana` enum plus `when` in `MainActivity`, with a bottom `NavigationBar` and edge-to-edge (`Scaffold` padding is passed down as `modifier`). Move to Navigation 3 (skill `navigation-3`) once there are detail screens.
+- Navigation is a `Pestana` enum plus `when` in `MainActivity` (tabs: Inicio, Acompañar, Historial, Palabras, Ajustes), with a custom floating bottom bar and edge-to-edge (`Scaffold` padding is passed down as `modifier`). Move to Navigation 3 (skill `navigation-3`) once there are detail screens.
 - One shared `KalmiViewModel` serves all screens.
 - Screen pattern, with `ui/inicio/InicioScreen.kt` as the reference:
   - `XScreen(vm, modifier)` collects flows with `collectAsStateWithLifecycle`.
   - It delegates to a stateless `XContenido(data, lambdas)` that has a `@Preview`.
 - UI text is in Spanish. The tone must stay calm, never alarmist (guide §13.3, §15.6).
 - Material icons come from `material-icons-core` pinned at 1.7.8 (not in the Compose BOM).
+- Palette "Kalmi Blanco" in `ui/theme/Theme.kt`: emotion BASE colors are accents only (stripes, dots); text uses the TINTA variants (WCAG AA). Shared pieces in `ui/Componentes.kt` (`Encabezado`, `CaraKalmi`, `TarjetaFranja`, `Indicador`, `BarraSuave`).
 
 ## Android skills
 
