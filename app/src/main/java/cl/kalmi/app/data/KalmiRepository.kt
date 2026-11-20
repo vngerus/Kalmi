@@ -36,6 +36,8 @@ class KalmiRepository(
     private val interpretador: Interpretador = ReglasInterpretador(),
     personalesIniciales: List<String> = Vocabulario.PERSONALES_DEFECTO,
     private val guardarPersonales: (List<String>) -> Unit = {},
+    cargarHistorial: suspend () -> List<Evento> = { emptyList() },
+    private val guardarEvento: suspend (Evento) -> Unit = {},
 ) {
     val estadoConexion = device.estado
 
@@ -54,7 +56,7 @@ class KalmiRepository(
     private val _estadoComando = MutableStateFlow<Pair<Comando, EstadoComando>?>(null)
     val estadoComando: StateFlow<Pair<Comando, EstadoComando>?> = _estadoComando.asStateFlow()
 
-    // ponytail: historial en memoria, se pierde al cerrar la app. Paso 5 de la guía: Room.
+    // Historial: en memoria para la UI y guardado en Room (paso 5) a través de guardarEvento.
     private val _historial = MutableStateFlow<List<Evento>>(emptyList())
     val historial: StateFlow<List<Evento>> = _historial.asStateFlow()
 
@@ -69,6 +71,11 @@ class KalmiRepository(
     private val okPendientes = mutableMapOf<Int, CompletableDeferred<Long>>()
 
     init {
+        scope.launch {
+            val guardado = cargarHistorial()
+            // Si llegó algo mientras se cargaba, queda arriba y no se duplica.
+            _historial.update { nuevos -> nuevos + guardado.filter { g -> nuevos.none { it.mismoQue(g) } } }
+        }
         scope.launch {
             device.lineas.collect { linea ->
                 when (val m = Protocolo.parsear(linea)) {
@@ -105,9 +112,16 @@ class KalmiRepository(
     }
 
     /** Respuesta del cuidador a "¿Acertó?": queda junto al evento (datos para una IA futura). */
-    fun marcarAcierto(seq: Int, acerto: Boolean) {
-        _historial.update { lista -> lista.map { if (it.seq == seq) it.copy(acerto = acerto) else it } }
-        _alertaActual.update { if (it?.seq == seq) it.copy(acerto = acerto) else it }
+    fun marcarAcierto(evento: Evento, acerto: Boolean) {
+        actualizar(evento) { it.copy(acerto = acerto) }
+        _alertaActual.update { if (it?.mismoQue(evento) == true) it.copy(acerto = acerto) else it }
+    }
+
+    /** Cambia un evento del historial (identificado por momento + seq) y lo guarda. */
+    private fun actualizar(evento: Evento, cambio: (Evento) -> Evento) {
+        var guardar: Evento? = null
+        _historial.update { lista -> lista.map { if (it.mismoQue(evento)) cambio(it).also { c -> guardar = c } else it } }
+        guardar?.let { scope.launch { guardarEvento(it) } }
     }
 
     suspend fun conectar() = device.conectar()
@@ -169,6 +183,7 @@ class KalmiRepository(
     private fun crearAlerta(e: Evento) {
         _alertaActual.value = e
         _historial.update { listOf(e) + it }
+        scope.launch { guardarEvento(e) }
     }
 
     /** Envía un comando con hasta 2 reintentos (1 s c/u). Devuelve el RTT en ms o null. */
@@ -197,9 +212,7 @@ class KalmiRepository(
     suspend fun marcarAtendido() {
         val actual = _alertaActual.value ?: return
         val ahora = reloj()
-        _historial.update { lista ->
-            lista.map { if (it.seq == actual.seq) it.copy(atendido = true, atendidoEn = ahora) else it }
-        }
+        actualizar(actual) { it.copy(atendido = true, atendidoEn = ahora) }
         _alertaActual.value = null
         lecturasAltas = 0
         enviarComando(Comando.Atendido)

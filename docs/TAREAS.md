@@ -42,7 +42,7 @@ Diseño: `docs/superpowers/specs/2026-11-19-kalmi-uno-palabras-design.md` · Pla
 
 ## Después (pasos 5+)
 
-Room (5) · Supabase (6) · FCM (7) · BLE real + permisos (8) · servicio en primer plano (9) · WiFi (10) · seguridad (11).
+~~Room (5)~~ hecho (`data/local/HistorialDb.kt`, últimos 30 días) · Supabase (6) · FCM (7) · BLE real + permisos (8) · servicio en primer plano (9) · WiFi (10) · seguridad (11).
 
 ## Flujo de trabajo (ramas, commits, PR)
 

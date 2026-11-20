@@ -59,7 +59,7 @@ UI (Compose) → KalmiViewModel → KalmiRepository → KalmiDevice
   - Counts lost messages from `seq` gaps. `seq` is shared between `TEL` and `EVT`.
   - Detects tension from 3 consecutive pressure readings ≥75, re-armed when pressure drops below 60.
   - Sends commands with a fresh `id`, up to 3 tries with a 1 s timeout each, and measures RTT.
-  - Exposes everything as `StateFlow`. History is in-memory for now; Room is step 5.
+  - Exposes everything as `StateFlow`. History is persisted with Room (`data/local/HistorialDb.kt`, key = momento + seq because seq repeats after a Kalmi reboot), injected as `cargarHistorial`/`guardarEvento` lambdas so the repo stays JVM-testable. The seq window resets on every connect and when a TEL seq goes backwards.
 - **Threading invariant:** the repository and `FakeKalmiDevice` mutate plain maps and counters without locks. They must only run on the single-threaded `MainScope()` created in `KalmiApp`. Keep that invariant, or add synchronization if you introduce another dispatcher.
 - **Domain** (`domain/`) has no Android or Compose imports. Emotion colors are extension properties in `ui/theme` (`Emocion.color` for the full color, `Emocion.fondo` for a ~18% alpha alert background).
 

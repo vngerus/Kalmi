@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import cl.kalmi.app.domain.Evento
 import cl.kalmi.app.domain.Comando
 import kotlinx.coroutines.launch
 
@@ -44,7 +45,7 @@ class KalmiViewModel(
     fun marcarAtendido() = viewModelScope.launch { repo.marcarAtendido() }
     fun enviar(c: Comando) = viewModelScope.launch { repo.enviarComando(c) }
     fun guardarPersonales(lista: List<String>) = viewModelScope.launch { repo.actualizarPersonales(lista) }
-    fun marcarAcierto(seq: Int, acerto: Boolean) = repo.marcarAcierto(seq, acerto)
+    fun marcarAcierto(evento: Evento, acerto: Boolean) = repo.marcarAcierto(evento, acerto)
 
     companion object {
         val Factory = viewModelFactory {

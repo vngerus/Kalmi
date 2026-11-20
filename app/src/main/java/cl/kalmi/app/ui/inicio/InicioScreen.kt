@@ -67,7 +67,7 @@ fun InicioScreen(vm: KalmiViewModel, modifier: Modifier = Modifier, onResponder:
     InicioContenido(
         conexion, bateria, alerta, tel, historial,
         onAtendido = { vm.marcarAtendido() },
-        onAcierto = { seq, acerto -> vm.marcarAcierto(seq, acerto) },
+        onAcierto = { evento, acerto -> vm.marcarAcierto(evento, acerto) },
         onConectar = rememberConectar(vm),
         onResponder = onResponder,
         modifier = modifier,
@@ -82,7 +82,7 @@ fun InicioContenido(
     tel: Telemetria?,
     historial: List<Evento>,
     onAtendido: () -> Unit,
-    onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
+    onAcierto: (evento: Evento, acerto: Boolean) -> Unit = { _, _ -> },
     onConectar: () -> Unit = {},
     onResponder: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -119,7 +119,7 @@ fun InicioContenido(
 }
 
 @Composable
-private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Boolean) -> Unit, onResponder: () -> Unit) {
+private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Evento, Boolean) -> Unit, onResponder: () -> Unit) {
     TarjetaFranja(franja = e.colorTema, fondo = e.fondoTema) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (e.emocion != null) {
@@ -143,8 +143,8 @@ private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Bo
                 if (e.acerto == null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("¿Acertó?", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                        FilledTonalButton(onClick = { onAcierto(e.seq, true) }) { Text("Sí") }
-                        OutlinedButton(onClick = { onAcierto(e.seq, false) }) { Text("No") }
+                        FilledTonalButton(onClick = { onAcierto(e, true) }) { Text("Sí") }
+                        OutlinedButton(onClick = { onAcierto(e, false) }) { Text("No") }
                     }
                 } else {
                     Text(

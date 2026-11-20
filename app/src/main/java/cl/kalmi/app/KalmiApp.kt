@@ -9,6 +9,8 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import cl.kalmi.app.data.KalmiRepository
+import cl.kalmi.app.data.local.EventoEntity
+import cl.kalmi.app.data.local.HistorialDb
 import cl.kalmi.app.device.FakeKalmiDevice
 import cl.kalmi.app.device.DispositivoConmutable
 import cl.kalmi.app.device.ble.BleKalmiDevice
@@ -41,6 +43,8 @@ class KalmiApp : Application() {
         device.cambiar(if (activo) simulador else real)
     }
 
+    private val historialDb by lazy { HistorialDb.crear(this) }
+
     val repository: KalmiRepository by lazy {
         KalmiRepository(
             device,
@@ -49,6 +53,9 @@ class KalmiApp : Application() {
                 ?.takeIf { it.size == Vocabulario.PERSONALES }
                 ?: Vocabulario.PERSONALES_DEFECTO,
             guardarPersonales = { prefs.edit().putString(CLAVE_PERSONALES, it.joinToString("\n")).apply() },
+            // ponytail: se cargan los últimos 30 días; lo anterior queda en la base sin mostrarse.
+            cargarHistorial = { historialDb.eventos().desde(System.currentTimeMillis() - TREINTA_DIAS).map { it.aDominio() } },
+            guardarEvento = { historialDb.eventos().guardar(EventoEntity.desde(it)) },
         )
     }
 
@@ -69,7 +76,7 @@ class KalmiApp : Application() {
         // Cada aviso nuevo de Kalmi → notificación, solo si la app no está a la vista (ahí ya se ve en Inicio).
         val notificador = Notificador(this)
         appScope.launch {
-            repository.alertaActual.filterNotNull().distinctUntilChangedBy { it.seq }.collect {
+            repository.alertaActual.filterNotNull().distinctUntilChangedBy { it.momento to it.seq }.collect {
                 if (!enPrimerPlano) notificador.mostrar(it)
             }
         }
@@ -78,5 +85,6 @@ class KalmiApp : Application() {
     private companion object {
         const val CLAVE_PERSONALES = "personales"
         const val CLAVE_PRUEBA = "modo_prueba"
+        const val TREINTA_DIAS = 30L * 24 * 60 * 60 * 1000
     }
 }

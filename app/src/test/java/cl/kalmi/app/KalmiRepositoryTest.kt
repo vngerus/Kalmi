@@ -2,10 +2,12 @@ package cl.kalmi.app
 
 import cl.kalmi.app.data.KalmiRepository
 import cl.kalmi.app.device.KalmiDevice
+import cl.kalmi.app.domain.Canal
 import cl.kalmi.app.domain.Comando
 import cl.kalmi.app.domain.Emocion
 import cl.kalmi.app.domain.EstadoComando
 import cl.kalmi.app.domain.EstadoConexion
+import cl.kalmi.app.domain.Evento
 import cl.kalmi.app.domain.Protocolo
 import cl.kalmi.app.domain.Vocabulario
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -32,12 +35,16 @@ class KalmiRepositoryTest {
 
     private val guardadas = mutableListOf<List<String>>()
 
-    private fun TestScope.crearRepo(): KalmiRepository {
+    private val eventosGuardados = mutableListOf<Evento>()
+
+    private fun TestScope.crearRepo(historialGuardado: List<Evento> = emptyList()): KalmiRepository {
         val repo = KalmiRepository(
             device,
             backgroundScope,
             reloj = { currentTime },
             guardarPersonales = { guardadas += it },
+            cargarHistorial = { historialGuardado },
+            guardarEvento = { eventosGuardados += it },
         )
         runCurrent() // el repo queda suscrito a device.lineas antes de emitir nada
         return repo
@@ -101,7 +108,7 @@ class KalmiRepositoryTest {
         val repo = crearRepo()
         recibir("PAL,1,0,4", "PAL,2,1,9")
 
-        repo.marcarAcierto(1, true)
+        repo.marcarAcierto(repo.historial.value.single { it.seq == 1 }, true)
 
         assertEquals(true, repo.historial.value.single { it.seq == 1 }.acerto)
         assertEquals(2, repo.alertaActual.value?.seq)
@@ -138,6 +145,45 @@ class KalmiRepositoryTest {
         assertEquals(30f, calidad.porcentajePerdida, 0.01f)
         // El evento igual llega aunque se hayan perdido mensajes antes.
         assertEquals(Emocion.TRISTE, repo.historial.value.single().emocion)
+    }
+
+    @Test fun historialGuardadoSeCargaAlIniciarYLoNuevoVaArriba() = runTest {
+        val viejo = Evento(3, Emocion.BIEN, -86_400_000, Canal.BLE)
+        val repo = crearRepo(historialGuardado = listOf(viejo))
+        assertEquals(listOf(viejo), repo.historial.value)
+
+        recibir("EVT,1,E2")
+
+        assertEquals(listOf(Emocion.TRISTE, Emocion.BIEN), repo.historial.value.map { it.emocion })
+    }
+
+    @Test fun cadaCambioSeGuarda() = runTest {
+        val repo = crearRepo()
+
+        recibir("PAL,1,0,8")
+        repo.marcarAcierto(repo.alertaActual.value!!, true)
+        repo.marcarAtendido()
+        runCurrent()
+
+        assertEquals(3, eventosGuardados.size)
+        assertEquals(true, eventosGuardados[1].acerto)
+        assertTrue(eventosGuardados[2].atendido)
+        assertEquals(true, eventosGuardados[2].acerto) // atender no borra el acierto
+    }
+
+    @Test fun mismoSeqDeOtroDiaNoSeConfunde() = runTest {
+        val viejo = Evento(6, null, 0, Canal.BLE, palabras = listOf("Agua"))
+        advanceTimeBy(60_000)
+        val repo = crearRepo(historialGuardado = listOf(viejo))
+
+        recibir("PAL,6,0,4") // Kalmi reiniciado: vuelve a usar seq 6
+        repo.marcarAcierto(repo.alertaActual.value!!, false)
+        repo.marcarAtendido()
+
+        val (nuevo, antiguo) = repo.historial.value
+        assertEquals(false, nuevo.acerto)
+        assertTrue(nuevo.atendido)
+        assertEquals(viejo, antiguo)
     }
 
     @Test fun reconectarNoCuentaElSaltoDeSeqComoPerdida() = runTest {

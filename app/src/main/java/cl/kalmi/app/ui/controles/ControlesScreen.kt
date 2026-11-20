@@ -94,7 +94,7 @@ fun ControlesScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
         rttMs = calidad.ultimoRttMs,
         onEnviar = { vm.enviar(it) },
         onAtendido = { vm.marcarAtendido() },
-        onAcierto = { seq, acerto -> vm.marcarAcierto(seq, acerto) },
+        onAcierto = { evento, acerto -> vm.marcarAcierto(evento, acerto) },
         onConectar = rememberConectar(vm),
         modifier = modifier,
     )
@@ -110,7 +110,7 @@ fun ControlesContenido(
     onAtendido: () -> Unit,
     onConectar: () -> Unit,
     modifier: Modifier = Modifier,
-    onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
+    onAcierto: (evento: Evento, acerto: Boolean) -> Unit = { _, _ -> },
 ) {
     val sugerida = alerta?.let(Avisos::respuestaSugerida)
     // El brillo se envía al soltar el deslizador y solo si cambió lo suficiente (máx. 1 envío por gesto).
@@ -171,7 +171,7 @@ private fun Contexto(
     alerta: Evento?,
     onAtendido: () -> Unit,
     onConectar: () -> Unit,
-    onAcierto: (Int, Boolean) -> Unit,
+    onAcierto: (Evento, Boolean) -> Unit,
 ) {
     val color = alerta?.colorTema ?: if (conectado) KalmiColors.Bien else KalmiColors.Calma
     Box(
@@ -209,8 +209,8 @@ private fun Contexto(
                     if (alerta.acerto == null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("¿Acertó?", style = MaterialTheme.typography.labelLarge)
-                            FilledTonalButton(onClick = { onAcierto(alerta.seq, true) }, modifier = Modifier.height(36.dp)) { Text("Sí") }
-                            OutlinedButton(onClick = { onAcierto(alerta.seq, false) }, modifier = Modifier.height(36.dp)) { Text("No") }
+                            FilledTonalButton(onClick = { onAcierto(alerta, true) }, modifier = Modifier.height(36.dp)) { Text("Sí") }
+                            OutlinedButton(onClick = { onAcierto(alerta, false) }, modifier = Modifier.height(36.dp)) { Text("No") }
                         }
                     }
                 }

@@ -40,7 +40,10 @@ data class Evento(
     val palabras: List<String> = emptyList(),
     val interpretacion: Interpretacion? = null,
     val acerto: Boolean? = null, // respuesta del cuidador a "¿Acertó?"
-)
+) {
+    /** seq se repite si Kalmi se reinicia: un evento se identifica por momento + seq. */
+    fun mismoQue(otro: Evento) = momento == otro.momento && seq == otro.seq
+}
 
 data class Telemetria(
     val seq: Int,
