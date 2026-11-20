@@ -4,12 +4,17 @@ import cl.kalmi.app.device.KalmiDevice
 import cl.kalmi.app.domain.CalidadEnlace
 import cl.kalmi.app.domain.Canal
 import cl.kalmi.app.domain.Comando
+import cl.kalmi.app.domain.Contexto
 import cl.kalmi.app.domain.Emocion
 import cl.kalmi.app.domain.EstadoComando
+import cl.kalmi.app.domain.EstadoConexion
 import cl.kalmi.app.domain.Evento
+import cl.kalmi.app.domain.Interpretador
 import cl.kalmi.app.domain.MensajeKalmi
 import cl.kalmi.app.domain.Protocolo
+import cl.kalmi.app.domain.ReglasInterpretador
 import cl.kalmi.app.domain.Telemetria
+import cl.kalmi.app.domain.Vocabulario
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +33,9 @@ class KalmiRepository(
     private val device: KalmiDevice,
     private val scope: CoroutineScope,
     private val reloj: () -> Long = System::currentTimeMillis,
+    private val interpretador: Interpretador = ReglasInterpretador(),
+    personalesIniciales: List<String> = Vocabulario.PERSONALES_DEFECTO,
+    private val guardarPersonales: (List<String>) -> Unit = {},
 ) {
     val estadoConexion = device.estado
 
@@ -50,6 +58,10 @@ class KalmiRepository(
     private val _historial = MutableStateFlow<List<Evento>>(emptyList())
     val historial: StateFlow<List<Evento>> = _historial.asStateFlow()
 
+    /** Palabras personales (índices 4–9). La app es la dueña de la lista; Kalmi recibe una copia. */
+    private val _personales = MutableStateFlow(personalesIniciales)
+    val personales: StateFlow<List<String>> = _personales.asStateFlow()
+
     private var ultimoSeq = 0
     private val eventosVistos = mutableSetOf<Int>()
     private var lecturasAltas = 0
@@ -64,12 +76,33 @@ class KalmiRepository(
                     is MensajeKalmi.Tel -> alRecibirTelemetria(m)
                     is MensajeKalmi.Evt -> alRecibirEvento(m)
                     is MensajeKalmi.Ok -> okPendientes.remove(m.id)?.complete(reloj())
-                    is MensajeKalmi.Pal -> Unit // se implementa con el interpretador
+                    is MensajeKalmi.Pal -> alRecibirPalabras(m)
                     is MensajeKalmi.Bat -> _bateria.value = m.porcentaje
-                    is MensajeKalmi.Cfg -> Unit // paso 10: configuración WiFi
+                    is MensajeKalmi.Cfg -> Unit // CFG,PAL,OK / ERR: sin acción por ahora
                 }
             }
         }
+        scope.launch {
+            device.estado.collect { if (it is EstadoConexion.Conectado) enviarPersonales() }
+        }
+    }
+
+    /** Guarda la lista (6 palabras) y, si Kalmi está conectado, se la envía. Si no, se envía al conectar. */
+    suspend fun actualizarPersonales(lista: List<String>) {
+        require(lista.size == Vocabulario.PERSONALES) { "se esperan ${Vocabulario.PERSONALES} palabras" }
+        _personales.value = lista
+        guardarPersonales(lista)
+        if (device.estado.value is EstadoConexion.Conectado) enviarPersonales()
+    }
+
+    private suspend fun enviarPersonales() {
+        _personales.value.forEachIndexed { i, texto -> device.enviar(Protocolo.cfgPalabra(i + 4, texto)) }
+    }
+
+    /** Respuesta del cuidador a "¿Acertó?": queda junto al evento (datos para una IA futura). */
+    fun marcarAcierto(seq: Int, acerto: Boolean) {
+        _historial.update { lista -> lista.map { if (it.seq == seq) it.copy(acerto = acerto) else it } }
+        _alertaActual.update { if (it?.seq == seq) it.copy(acerto = acerto) else it }
     }
 
     suspend fun conectar() = device.conectar()
@@ -101,6 +134,23 @@ class KalmiRepository(
         registrarSeq(m.seq)
         if (!eventosVistos.add(m.seq)) return // duplicado por reintento: ya se mostró
         crearAlerta(Evento(m.seq, m.emocion, reloj(), Canal.BLE))
+    }
+
+    private suspend fun alRecibirPalabras(m: MensajeKalmi.Pal) {
+        device.enviar(Protocolo.ack(m.seq)) // igual que EVT: confirmar siempre
+        registrarSeq(m.seq)
+        if (!eventosVistos.add(m.seq)) return
+        val vocabulario = Vocabulario.completo(_personales.value)
+        val palabras = m.indices.map { vocabulario[it] }
+        val ahora = reloj()
+        val contexto = Contexto(
+            emocionReciente = _historial.value
+                .firstOrNull { it.emocion != null && it.momento >= ahora - CINCO_MIN }?.emocion,
+            presionAlta = (_telemetria.value?.presion ?: 0) >= 75,
+        )
+        crearAlerta(
+            Evento(m.seq, null, ahora, Canal.BLE, palabras = palabras, interpretacion = interpretador.interpretar(palabras, contexto)),
+        )
     }
 
     private fun crearAlerta(e: Evento) {
@@ -140,5 +190,9 @@ class KalmiRepository(
         _alertaActual.value = null
         lecturasAltas = 0
         enviarComando(Comando.Atendido)
+    }
+
+    private companion object {
+        const val CINCO_MIN = 5 * 60_000L
     }
 }

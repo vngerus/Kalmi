@@ -7,6 +7,7 @@ import cl.kalmi.app.domain.Emocion
 import cl.kalmi.app.domain.EstadoComando
 import cl.kalmi.app.domain.EstadoConexion
 import cl.kalmi.app.domain.Protocolo
+import cl.kalmi.app.domain.Vocabulario
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,10 +30,82 @@ class KalmiRepositoryTest {
 
     private val device = DispositivoDePrueba()
 
+    private val guardadas = mutableListOf<List<String>>()
+
     private fun TestScope.crearRepo(): KalmiRepository {
-        val repo = KalmiRepository(device, backgroundScope) { currentTime }
+        val repo = KalmiRepository(
+            device,
+            backgroundScope,
+            reloj = { currentTime },
+            guardarPersonales = { guardadas += it },
+        )
         runCurrent() // el repo queda suscrito a device.lineas antes de emitir nada
         return repo
+    }
+
+    @Test fun palabrasSeInterpretanYGeneranAlerta() = runTest {
+        val repo = crearRepo()
+
+        recibir("PAL,3,0,8") // Quiero + Abrazo
+
+        val alerta = repo.alertaActual.value!!
+        assertEquals(listOf("Quiero", "Abrazo"), alerta.palabras)
+        assertEquals("Quiere abrazo", alerta.interpretacion?.texto)
+        assertTrue(Protocolo.ack(3) in device.enviadas)
+    }
+
+    @Test fun palDuplicadoTrasEvtApareceUnaVez() = runTest {
+        val repo = crearRepo()
+
+        recibir("PAL,3,0,8", "EVT,4,E2", "PAL,3,0,8") // el último es un reintento atrasado
+
+        assertEquals(2, repo.historial.value.size)
+        assertEquals(2, device.enviadas.count { it == Protocolo.ack(3) })
+    }
+
+    @Test fun palUsaEmocionReciente() = runTest {
+        val repo = crearRepo()
+
+        recibir("EVT,1,E3", "PAL,2,7") // Frustrado y luego "Duele"
+
+        assertTrue("Frustrado" in repo.alertaActual.value!!.interpretacion!!.razon)
+    }
+
+    @Test fun listaSeEnviaAlConectar() = runTest {
+        device.estado.value = EstadoConexion.Desconectado
+        crearRepo()
+
+        device.estado.value = EstadoConexion.Conectado("Kalmi-TEST")
+        runCurrent()
+
+        val cfg = device.enviadas.filter { it.startsWith("CFG,PAL,") }
+        assertEquals((4..9).map { Protocolo.cfgPalabra(it, Vocabulario.PERSONALES_DEFECTO[it - 4]) }, cfg)
+    }
+
+    @Test fun editarDesconectadoSeEnviaAlReconectar() = runTest {
+        device.estado.value = EstadoConexion.Desconectado
+        val repo = crearRepo()
+        val nueva = listOf("Agua", "Pan", "Baño", "Duele", "Mamá", "Auto")
+
+        repo.actualizarPersonales(nueva)
+        runCurrent()
+        assertTrue(device.enviadas.none { it.startsWith("CFG,") })
+        assertEquals(listOf(nueva), guardadas)
+
+        device.estado.value = EstadoConexion.Conectado("Kalmi-TEST")
+        runCurrent()
+        assertTrue(Protocolo.cfgPalabra(8, "Mamá") in device.enviadas)
+    }
+
+    @Test fun aciertoActualizaHistorialSinTocarAlertaActual() = runTest {
+        val repo = crearRepo()
+        recibir("PAL,1,0,4", "PAL,2,1,9")
+
+        repo.marcarAcierto(1, true)
+
+        assertEquals(true, repo.historial.value.single { it.seq == 1 }.acerto)
+        assertEquals(2, repo.alertaActual.value?.seq)
+        assertEquals(null, repo.alertaActual.value?.acerto)
     }
 
     /** Simula líneas que llegan desde Kalmi (se firman acá) y deja que el repo las procese. */
