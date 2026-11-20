@@ -1,5 +1,9 @@
 package cl.kalmi.app.ui.conexion
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +17,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +38,12 @@ import cl.kalmi.app.ui.KalmiViewModel
 import cl.kalmi.app.ui.theme.KalmiTheme
 import kotlin.math.roundToInt
 
+private val PERMISOS_BLE = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+} else {
+    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+}
+
 /** Emociones que el niño puede marcar con los botones físicos (E1..E5). */
 private val EMOCIONES_BOTON = Emocion.entries.filter { it.codigo in 1..5 }
 
@@ -42,6 +55,12 @@ fun ConexionScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
     val calidad by vm.calidad.collectAsStateWithLifecycle()
 
     val simulador = vm.simulador.takeIf { BuildConfig.DEBUG }
+    var usarReal by remember { mutableStateOf(vm.usarReal) }
+
+    // El Kalmi real necesita permisos de Bluetooth; se piden recién al tocar "Conectar".
+    val pedirPermisos = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.all { it }) vm.conectar()
+    }
     // probabilidadPerdida es un var simple del simulador: la UI guarda su copia para redibujar.
     var perdida by remember { mutableFloatStateOf(simulador?.probabilidadPerdida?.toFloat() ?: 0f) }
 
@@ -49,9 +68,12 @@ fun ConexionScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
         conexion = conexion,
         bateria = bateria,
         calidad = calidad,
-        onConectar = { vm.conectar() },
+        onConectar = { if (vm.usandoReal) pedirPermisos.launch(PERMISOS_BLE) else vm.conectar() },
         onDesconectar = { vm.desconectar() },
         modifier = modifier,
+        explicarPermisos = vm.usandoReal,
+        modoReal = if (BuildConfig.DEBUG) usarReal else null,
+        onModoReal = { usarReal = it; vm.usarReal = it },
         onSimular = simulador?.let { sim -> { e: Emocion -> sim.simularBoton(e.codigo) } },
         onSimularPalabras = { simulador?.simularPalabras() },
         perdida = perdida,
@@ -71,6 +93,9 @@ fun ConexionContenido(
     onConectar: () -> Unit,
     onDesconectar: () -> Unit,
     modifier: Modifier = Modifier,
+    explicarPermisos: Boolean = false,
+    modoReal: Boolean? = null, // null = no mostrar el interruptor (release)
+    onModoReal: (Boolean) -> Unit = {},
     onSimular: ((Emocion) -> Unit)? = null,
     onSimularPalabras: () -> Unit = {},
     perdida: Float = 0f,
@@ -100,6 +125,22 @@ fun ConexionContenido(
             OutlinedButton(onClick = onDesconectar) { Text("Desconectar") }
         } else {
             Button(onClick = onConectar) { Text("Conectar") }
+        }
+        if (explicarPermisos && !conectado) {
+            Text(
+                "Kalmi usa Bluetooth para avisarte al instante. Te pediremos permiso para buscarlo y conectarte.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        modoReal?.let { real ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Switch(checked = real, onCheckedChange = onModoReal)
+                Column {
+                    Text("Usar Kalmi real (HM-10)", style = MaterialTheme.typography.bodyMedium)
+                    Text("Se aplica al reiniciar la app", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
 
         Diagnostico(calidad)

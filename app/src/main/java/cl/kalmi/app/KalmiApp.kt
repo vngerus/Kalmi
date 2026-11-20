@@ -5,6 +5,8 @@ import android.content.Context
 import cl.kalmi.app.data.KalmiRepository
 import cl.kalmi.app.device.FakeKalmiDevice
 import cl.kalmi.app.device.KalmiDevice
+import cl.kalmi.app.device.ble.BleKalmiDevice
+import cl.kalmi.app.device.ble.PerfilBle
 import cl.kalmi.app.domain.Vocabulario
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
@@ -17,7 +19,15 @@ class KalmiApp : Application() {
 
     private val prefs by lazy { getSharedPreferences("kalmi", Context.MODE_PRIVATE) }
 
-    val device: KalmiDevice by lazy { FakeKalmiDevice(appScope) }
+    /** En release siempre el Kalmi real. En debug se elige en Conexión (se aplica al reiniciar la app). */
+    var usarDispositivoReal: Boolean
+        get() = !BuildConfig.DEBUG || prefs.getBoolean(CLAVE_REAL, false)
+        set(valor) = prefs.edit().putBoolean(CLAVE_REAL, valor).apply()
+
+    // ponytail: se elige al iniciar; cambio en caliente si molesta en las demos.
+    val device: KalmiDevice by lazy {
+        if (usarDispositivoReal) BleKalmiDevice(this, appScope, PerfilBle.HM10) else FakeKalmiDevice(appScope)
+    }
 
     val repository: KalmiRepository by lazy {
         KalmiRepository(
@@ -32,5 +42,6 @@ class KalmiApp : Application() {
 
     private companion object {
         const val CLAVE_PERSONALES = "personales"
+        const val CLAVE_REAL = "real"
     }
 }

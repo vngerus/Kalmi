@@ -16,7 +16,14 @@ import kotlinx.coroutines.launch
 class KalmiViewModel(
     private val repo: KalmiRepository,
     device: KalmiDevice,
+    private val app: KalmiApp? = null,
 ) : ViewModel() {
+
+    /** true = BleKalmiDevice (HM-10). Cambiarlo se aplica al reiniciar la app. */
+    var usarReal: Boolean
+        get() = app?.usarDispositivoReal ?: false
+        set(valor) { app?.usarDispositivoReal = valor }
+    val usandoReal = device !is FakeKalmiDevice
 
     val conexion = repo.estadoConexion
     val telemetria = repo.telemetria
@@ -41,7 +48,7 @@ class KalmiViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as KalmiApp
-                KalmiViewModel(app.repository, app.device)
+                KalmiViewModel(app.repository, app.device, app)
             }
         }
     }
