@@ -21,3 +21,4 @@ build/
 # Config local de Claude Code
 .claude/settings.local.json
 /.idea/deploymentTargetSelector.xml
+.superpowers/

@@ -64,6 +64,7 @@ class KalmiRepository(
                     is MensajeKalmi.Tel -> alRecibirTelemetria(m)
                     is MensajeKalmi.Evt -> alRecibirEvento(m)
                     is MensajeKalmi.Ok -> okPendientes.remove(m.id)?.complete(reloj())
+                    is MensajeKalmi.Pal -> Unit // se implementa con el interpretador
                     is MensajeKalmi.Bat -> _bateria.value = m.porcentaje
                     is MensajeKalmi.Cfg -> Unit // paso 10: configuración WiFi
                 }

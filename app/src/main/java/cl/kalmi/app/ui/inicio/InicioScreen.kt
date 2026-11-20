@@ -24,8 +24,9 @@ import cl.kalmi.app.domain.Evento
 import cl.kalmi.app.domain.Telemetria
 import cl.kalmi.app.ui.KalmiViewModel
 import cl.kalmi.app.ui.theme.KalmiTheme
-import cl.kalmi.app.ui.theme.color
-import cl.kalmi.app.ui.theme.fondo
+import cl.kalmi.app.ui.theme.colorTema
+import cl.kalmi.app.ui.theme.titulo
+import cl.kalmi.app.ui.theme.fondoTema
 
 /**
  * Patrón de referencia para las demás pantallas:
@@ -75,11 +76,11 @@ fun InicioContenido(
 @Composable
 private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = e.emocion.fondo),
+        colors = CardDefaults.cardColors(containerColor = e.fondoTema),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(e.emocion.nombre, style = MaterialTheme.typography.headlineSmall, color = e.emocion.color)
+            Text(e.titulo, style = MaterialTheme.typography.headlineSmall, color = e.colorTema)
             Text(DateUtils.getRelativeTimeSpanString(e.momento).toString())
             Button(onClick = onAtendido) { Text("Marcar como atendido") }
         }

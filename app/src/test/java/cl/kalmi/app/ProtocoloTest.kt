@@ -29,4 +29,21 @@ class ProtocoloTest {
     @Test fun comandoBrilloSeRecorta() {
         assertEquals(Protocolo.firmar("CMD,7,BRI,10"), Protocolo.comando(7, Comando.Brillo(2)))
     }
+
+    @Test fun palConUnaYDosPalabras() {
+        assertEquals(MensajeKalmi.Pal(7, listOf(0, 8)), Protocolo.parsear(Protocolo.firmar("PAL,7,0,8")))
+        assertEquals(MensajeKalmi.Pal(8, listOf(5)), Protocolo.parsear(Protocolo.firmar("PAL,8,5")))
+    }
+
+    @Test fun palInvalidoSeDescarta() {
+        assertNull(Protocolo.parsear(Protocolo.firmar("PAL,5,12")))
+        assertNull(Protocolo.parsear(Protocolo.firmar("PAL,5,1,2,3")))
+        assertNull(Protocolo.parsear(Protocolo.firmar("PAL,5")))
+    }
+
+    @Test fun cfgPalabraSaneaTexto() {
+        assertEquals(Protocolo.firmar("CFG,PAL,6,Bano"), Protocolo.cfgPalabra(6, "Baño"))
+        assertEquals(Protocolo.firmar("CFG,PAL,4,jugo pan"), Protocolo.cfgPalabra(4, "jugo, pan"))
+        assertEquals("Superheroe", Protocolo.sanear("Superhéroes favoritos"))
+    }
 }

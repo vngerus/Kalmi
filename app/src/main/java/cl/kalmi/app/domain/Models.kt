@@ -17,13 +17,29 @@ enum class Emocion(val codigo: Int, val nombre: String) {
 
 enum class Canal { BLE, NUBE }
 
+/** Palabras que el niño puede elegir con el botón Quiero: índices 0–3 núcleo fijo, 4–9 personales. */
+object Vocabulario {
+    val NUCLEO = listOf("Quiero", "No", "Más", "Parar")
+    val PERSONALES_DEFECTO = listOf("Agua", "Comer", "Baño", "Duele", "Abrazo", "Jugar")
+    const val PERSONALES = 6
+
+    fun completo(personales: List<String>): List<String> = NUCLEO + personales
+}
+
+/** Lo que Kalmi cree que el niño quiso decir. La razón siempre se muestra al cuidador. */
+data class Interpretacion(val texto: String, val razon: String)
+
+/** `emocion == null` = evento de palabras (`PAL`). */
 data class Evento(
     val seq: Int,
-    val emocion: Emocion,
+    val emocion: Emocion?,
     val momento: Long, // epoch ms
     val canal: Canal,
     val atendido: Boolean = false,
     val atendidoEn: Long? = null,
+    val palabras: List<String> = emptyList(),
+    val interpretacion: Interpretacion? = null,
+    val acerto: Boolean? = null, // respuesta del cuidador a "¿Acertó?"
 )
 
 data class Telemetria(

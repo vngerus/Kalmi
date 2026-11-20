@@ -29,8 +29,9 @@ import cl.kalmi.app.domain.Emocion
 import cl.kalmi.app.domain.Evento
 import cl.kalmi.app.ui.KalmiViewModel
 import cl.kalmi.app.ui.theme.KalmiTheme
-import cl.kalmi.app.ui.theme.color
-import cl.kalmi.app.ui.theme.fondo
+import cl.kalmi.app.ui.theme.colorTema
+import cl.kalmi.app.ui.theme.titulo
+import cl.kalmi.app.ui.theme.fondoTema
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -94,7 +95,7 @@ fun HistorialContenido(
 @Composable
 private fun FilaEvento(e: Evento) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = e.emocion.fondo),
+        colors = CardDefaults.cardColors(containerColor = e.fondoTema),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -104,7 +105,7 @@ private fun FilaEvento(e: Evento) {
         ) {
             Text(e.hora(), style = MaterialTheme.typography.titleMedium)
             Column {
-                Text(e.emocion.nombre, style = MaterialTheme.typography.titleMedium, color = e.emocion.color)
+                Text(e.titulo, style = MaterialTheme.typography.titleMedium, color = e.colorTema)
                 Text(textoAtencion(e), style = MaterialTheme.typography.bodySmall)
             }
         }
