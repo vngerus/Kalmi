@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -28,6 +29,7 @@ import cl.kalmi.app.ui.conexion.ConexionScreen
 import cl.kalmi.app.ui.controles.ControlesScreen
 import cl.kalmi.app.ui.historial.HistorialScreen
 import cl.kalmi.app.ui.inicio.InicioScreen
+import cl.kalmi.app.ui.palabras.PalabrasScreen
 import cl.kalmi.app.ui.theme.KalmiTheme
 
 // ponytail: 4 pestañas planas → enum + when. Pasar a Navigation 3 (skill navigation-3) cuando haya pantallas de detalle.
@@ -35,6 +37,7 @@ private enum class Pestana(val titulo: String, val icono: ImageVector) {
     INICIO("Inicio", Icons.Filled.Home),
     CONTROLES("Controles", Icons.Filled.Star),
     HISTORIAL("Historial", Icons.Filled.DateRange),
+    PALABRAS("Palabras", Icons.Filled.Edit),
     CONEXION("Conexión", Icons.Filled.Settings),
 }
 
@@ -67,6 +70,7 @@ class MainActivity : ComponentActivity() {
                         Pestana.INICIO -> InicioScreen(vm, mod)
                         Pestana.CONTROLES -> ControlesScreen(vm, mod)
                         Pestana.HISTORIAL -> HistorialScreen(vm, mod)
+                        Pestana.PALABRAS -> PalabrasScreen(vm, mod)
                         Pestana.CONEXION -> ConexionScreen(vm, mod)
                     }
                 }

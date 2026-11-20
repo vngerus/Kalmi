@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.kalmi.app.domain.Canal
 import cl.kalmi.app.domain.Emocion
 import cl.kalmi.app.domain.Evento
+import cl.kalmi.app.domain.Interpretacion
 import cl.kalmi.app.ui.KalmiViewModel
 import cl.kalmi.app.ui.theme.KalmiTheme
 import cl.kalmi.app.ui.theme.colorTema
@@ -106,6 +107,10 @@ private fun FilaEvento(e: Evento) {
             Text(e.hora(), style = MaterialTheme.typography.titleMedium)
             Column {
                 Text(e.titulo, style = MaterialTheme.typography.titleMedium, color = e.colorTema)
+                if (e.palabras.isNotEmpty()) {
+                    Text("Eligió: " + e.palabras.joinToString(" + "), style = MaterialTheme.typography.bodySmall)
+                }
+                e.acerto?.let { Text(if (it) "✓ acertó" else "✗ no acertó", style = MaterialTheme.typography.bodySmall) }
                 Text(textoAtencion(e), style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -137,6 +142,10 @@ private fun HistorialPreview() = KalmiTheme {
         historial = listOf(
             Evento(15, Emocion.FRUSTRADO, ahora - 60_000, Canal.BLE),
             Evento(12, Emocion.TRISTE, ahora - 600_000, Canal.BLE, atendido = true, atendidoEn = ahora - 588_000),
+            Evento(
+                14, null, ahora - 300_000, Canal.BLE, palabras = listOf("No", "Jugar"),
+                interpretacion = Interpretacion("No quiere jugar", "Eligió No + Jugar"), acerto = true,
+            ),
             Evento(9, Emocion.BIEN, ahora - 3_600_000, Canal.NUBE, atendido = true, atendidoEn = ahora - 3_400_000),
         ),
     )

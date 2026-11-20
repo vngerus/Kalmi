@@ -25,6 +25,7 @@ class KalmiViewModel(
     val calidad = repo.calidad
     val estadoComando = repo.estadoComando
     val historial = repo.historial
+    val personales = repo.personales
 
     /** No null solo con el simulador: habilita el panel de depuración. */
     val simulador = device as? FakeKalmiDevice
@@ -33,6 +34,8 @@ class KalmiViewModel(
     fun desconectar() = viewModelScope.launch { repo.desconectar() }
     fun marcarAtendido() = viewModelScope.launch { repo.marcarAtendido() }
     fun enviar(c: Comando) = viewModelScope.launch { repo.enviarComando(c) }
+    fun guardarPersonales(lista: List<String>) = viewModelScope.launch { repo.actualizarPersonales(lista) }
+    fun marcarAcierto(seq: Int, acerto: Boolean) = repo.marcarAcierto(seq, acerto)
 
     companion object {
         val Factory = viewModelFactory {

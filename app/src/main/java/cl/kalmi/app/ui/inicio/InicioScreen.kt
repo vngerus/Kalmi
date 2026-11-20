@@ -10,6 +10,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +24,7 @@ import cl.kalmi.app.domain.Canal
 import cl.kalmi.app.domain.Emocion
 import cl.kalmi.app.domain.EstadoConexion
 import cl.kalmi.app.domain.Evento
+import cl.kalmi.app.domain.Interpretacion
 import cl.kalmi.app.domain.Telemetria
 import cl.kalmi.app.ui.KalmiViewModel
 import cl.kalmi.app.ui.theme.KalmiTheme
@@ -41,7 +45,12 @@ fun InicioScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
     val tel by vm.telemetria.collectAsStateWithLifecycle()
     val historial by vm.historial.collectAsStateWithLifecycle()
 
-    InicioContenido(conexion, bateria, alerta, tel, historial, onAtendido = { vm.marcarAtendido() }, modifier)
+    InicioContenido(
+        conexion, bateria, alerta, tel, historial,
+        onAtendido = { vm.marcarAtendido() },
+        onAcierto = { seq, acerto -> vm.marcarAcierto(seq, acerto) },
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -52,6 +61,7 @@ fun InicioContenido(
     tel: Telemetria?,
     historial: List<Evento>,
     onAtendido: () -> Unit,
+    onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -61,7 +71,7 @@ fun InicioContenido(
             style = MaterialTheme.typography.labelLarge,
         )
 
-        if (alerta != null) TarjetaAlerta(alerta, onAtendido) else TarjetaTranquilo()
+        if (alerta != null) TarjetaAlerta(alerta, onAtendido, onAcierto) else TarjetaTranquilo()
 
         tel?.let {
             Barra("Luz", it.luz)
@@ -69,12 +79,16 @@ fun InicioContenido(
         }
 
         val ayudas = historial.count { it.emocion == Emocion.AYUDA }
-        Text("Hoy: ${historial.size - ayudas} emociones · $ayudas ayuda", style = MaterialTheme.typography.bodyMedium)
+        val conPalabras = historial.count { it.emocion == null }
+        Text(
+            "Hoy: ${historial.size - ayudas - conPalabras} emociones · $conPalabras con palabras · $ayudas ayuda",
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
 @Composable
-private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit) {
+private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Boolean) -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = e.fondoTema),
         modifier = Modifier.fillMaxWidth(),
@@ -82,6 +96,18 @@ private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(e.titulo, style = MaterialTheme.typography.headlineSmall, color = e.colorTema)
             Text(DateUtils.getRelativeTimeSpanString(e.momento).toString())
+            e.interpretacion?.let { i ->
+                Text("Porque: ${i.razon}", style = MaterialTheme.typography.bodySmall)
+                if (e.acerto == null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("¿Acertó?", style = MaterialTheme.typography.labelLarge)
+                        OutlinedButton(onClick = { onAcierto(e.seq, true) }) { Text("Sí") }
+                        OutlinedButton(onClick = { onAcierto(e.seq, false) }) { Text("No") }
+                    }
+                } else {
+                    Text(if (e.acerto) "✓ Confirmado por ti" else "✗ Marcado como no acertado", style = MaterialTheme.typography.labelLarge)
+                }
+            }
             Button(onClick = onAtendido) { Text("Marcar como atendido") }
         }
     }
@@ -114,4 +140,15 @@ private fun InicioPreview() = KalmiTheme {
         historial = listOf(e),
         onAtendido = {},
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun InicioPalabrasPreview() = KalmiTheme {
+    val e = Evento(
+        20, null, System.currentTimeMillis() - 8_000, Canal.BLE,
+        palabras = listOf("Quiero", "Abrazo"),
+        interpretacion = Interpretacion("Quiere abrazo", "Eligió Quiero + Abrazo; hace poco marcó Triste"),
+    )
+    InicioContenido(EstadoConexion.Conectado("Kalmi-SIM"), 82, e, Telemetria(21, 60, 30, 0), listOf(e), onAtendido = {})
 }
