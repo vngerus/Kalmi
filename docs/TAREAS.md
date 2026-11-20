@@ -36,7 +36,7 @@ Diseño: `docs/superpowers/specs/2026-11-19-kalmi-uno-palabras-design.md` · Pla
 - [x] Notificaciones (3 canales) que abren Acompañar
 - [x] Sketches `firmware/kalmi-uno` y `firmware/kalmi-telefono` (compilados para Uno) + guía Tinkercad (artifact)
 - [ ] **Probar BLE real**: Uno + HM-10 + teléfono Android físico
-- [ ] Probar los sketches en Tinkercad (EEPROM y serial entre dos placas)
+- [x] Probar los sketches en Tinkercad (EEPROM y serial entre dos placas): guion completo OK, incluidas tensión y pérdida de mensajes
 - [ ] Ícono de la app (hoy es el de Android por defecto)
 - [ ] Actualizar el informe con la sección "Mejoras v2" (necesita el `.docx`)
 
