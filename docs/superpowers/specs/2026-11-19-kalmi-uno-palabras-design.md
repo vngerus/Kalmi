@@ -7,13 +7,18 @@ Fecha: 2026-11-19 · Estado: borrador para aprobación
 Kalmi ayuda a niñas y niños autistas (en general, no solo al usuario beta) a **expresar** lo que sienten, **regularse** y que su **cuidador se entere**. Esta versión:
 
 - Reemplaza los dos nodos del informe (A niño + B cuidador) por **un solo dispositivo** (Arduino Uno como prototipo de prueba) que habla con la **app Android**, que asume el rol del Nodo B.
+- Se entrega en **dos ajustes**:
+  - **Tinkercad:** Uno "Kalmi" + Uno "Teléfono" que imita a la app.
+  - **App:** palabras, interpretación y conexión real con el Uno por Bluetooth (HM-10).
 - Hace a Kalmi **más sociable**: además de emociones, el niño puede decir **1–2 palabras** de un vocabulario corto, como en la Comunicación Aumentativa y Alternativa (CAA).
 - Es **funcional y didáctica ahora** (todo se demuestra en Tinkercad + app con simulador) y queda **preparada para un upgrade** (ESP32 con pictogramas, IA con consentimiento). El docente pide mostrar mejoras: este diseño es esa mejora y su hoja de ruta.
 
 ## 2. Objetivos, no-objetivos y anti-objetivos
 
 **Objetivos (esta entrega)**
-1. Sketch único para Arduino Uno que funciona en Tinkercad y en un Uno real, con el mismo protocolo que ya entiende la app.
+1. Sketch único para Arduino Uno ("Kalmi") que funciona en Tinkercad y en un Uno real, con el mismo protocolo que ya entiende la app.
+1b. Sketch "Teléfono" para un segundo Uno en Tinkercad que hace el papel de la app, para demostrar la conexión sin hardware.
+1c. La app se conecta a un Uno real con HM-10 (`BleKalmiDevice`), cambiando una línea en `KalmiApp`.
 2. Vocabulario: **núcleo fijo** (igual para todos) + **palabras personales** (las elige el cuidador desde la app).
 3. La app recibe palabras, las **interpreta con reglas** (explicables, testeables, sin internet) y avisa al cuidador.
 4. El cuidador confirma cada interpretación (**¿Acertó? Sí/No**): base de datos etiquetada para una IA futura.
@@ -21,7 +26,8 @@ Kalmi ayuda a niñas y niños autistas (en general, no solo al usuario beta) a *
 6. Informe actualizado con sección de mejoras y hoja de ruta.
 
 **No-objetivos (quedan como upgrade documentado)**
-- IA real (LLM en la nube o en el teléfono), voz/micrófono, pictogramas en pantalla, GPS, nube/Supabase, BLE real.
+- IA real (LLM en la nube o en el teléfono), voz/micrófono, pictogramas en pantalla, GPS, nube/Supabase.
+- Servicio en segundo plano, reconexión robusta y emparejamiento con código (pasos 9 y 11 de la guía).
 
 **Anti-objetivos (aunque funcione, sería un fracaso)**
 - Que la IA **decida o hable por el niño**. Siempre sugiere ("Kalmi cree que…") y explica por qué.
@@ -147,7 +153,42 @@ Agregar una sección **"Mejoras v2"** y corregir:
 - **Hoja de ruta:** Uno (prototipo de prueba) → ESP32-S3 + OLED con pictogramas ARASAAC → IA que sugiere con explicación y confirmación → voz (micrófono I2S) solo si se valida.
 - **Validación:** revisión del vocabulario con fonoaudiólogo o terapeuta ocupacional.
 
-### 5.8 Fuera del alcance
+### 5.8 Ajuste Tinkercad: Uno "Teléfono"
+
+```
+Uno "Kalmi"  TX 1 ──▶ RX 0  Uno "Teléfono"
+             RX 0 ◀── TX 1
+             GND ──── GND
+```
+
+- **Enlace:** serial por hardware cruzado (0/1) a 9600. El Monitor serie de cada placa muestra lo que esa placa envía.
+- **Plan B**, si Tinkercad no simula bien el serial de hardware entre dos placas: el enlace pasa a SoftwareSerial 2/3 en ambas y el botón Quiero se mueve a A1 o a otro pin libre, liberando lo necesario. El sketch de Kalmi para el Uno real sigue usando `Serial`.
+- **Qué hace el Teléfono (una "app mini"):**
+  - ACK a `EVT` y `PAL`, deduplicación por `seq`, conteo de perdidos y descartados.
+  - Detección de tensión (3 lecturas ≥75).
+  - Interpretación de `PAL` con las **mismas plantillas** que `ReglasInterpretador`, en versión compacta y en `PROGMEM`.
+  - Envío de `CMD` con reintentos y medición del RTT.
+  - Envío de la lista `CFG,PAL` al iniciar.
+- **Hardware del Teléfono:** LCD 16×2 (mismos pines que Kalmi), botones Atendido / Mensaje (rota "Ya voy", "Te quiero", "Estoy aquí") / Respirar / **Sí** / **No** (¿Acertó?), potenciómetro de brillo (envía `BRI` solo si cambia ≥5) y motor de vibración al llegar una alerta.
+- **Base:** lo que existe del Nodo B anterior.
+
+### 5.9 Ajuste app: conexión real con el Uno (HM-10)
+
+- **`BleKalmiDevice`** según la guía §9, pero con **UUIDs configurables**:
+  - **HM-10:** servicio `FFE0`; una sola característica, `FFE1`, para escribir y recibir notificaciones.
+  - **NUS:** queda listo para el ESP32.
+- **Detalles del HM-10:**
+  - Las notificaciones llegan en trozos de unos 20 bytes, así que se acumulan y se cortan por `
+` (ya está en el esqueleto de la guía).
+  - Las escrituras también se trocean en bloques de 20 bytes.
+- **Permisos en tiempo de ejecución** desde la pantalla Conexión: `BLUETOOTH_SCAN` y `BLUETOOTH_CONNECT` (Android 12+), `ACCESS_FINE_LOCATION` (≤11). Ver la skill `android-permissions-security`.
+- **Selección del dispositivo:** se escanea por nombre o servicio y se conecta al primero. La lista de selección queda para después.
+- **En `KalmiApp`:**
+  - En `debug`, un interruptor en Conexión permite elegir "Simulador" o "Kalmi real".
+  - En `release` se usa siempre el real.
+- **Prueba:** requiere el Uno real + el HM-10 + un **teléfono Android físico** (el emulador no tiene Bluetooth). Antes de la app, se prueba con nRF Connect: escribir `CMD,1,ATN*..` y ver el `OK`.
+
+### 5.10 Fuera del alcance
 
 - **Mockup:** el mockup de la actividad formativa (individual) es otra entrega; puede usar las pantallas de este diseño.
 
@@ -158,13 +199,18 @@ Agregar una sección **"Mejoras v2"** y corregir:
 - Lista de palabras personalizable desde la app.
 - Base estandarizada + personalización.
 - IA solo como mejora futura, pero con la arquitectura preparada.
+- Dos ajustes:
+  - Tinkercad con 2 Unos (Kalmi + Teléfono que imita a la app).
+  - App con conexión real al Uno.
 - Informe actualizado con mejoras.
 
 ## 7. Decisiones de Claude (corregibles)
 
 - Núcleo **Quiero · No · Más · Parar** y lista personal por defecto.
 - Botón Quiero en el pin 2, barrido con 3 s / 5 s.
-- Enlace por `Serial` 0/1 (también con el HM-10).
+- Enlace por `Serial` 0/1 (también con el HM-10); plan B con SoftwareSerial en Tinkercad.
+- HM-10 como módulo Bluetooth del Uno real; UUIDs configurables en `BleKalmiDevice`.
+- Interruptor Simulador / Kalmi real solo en debug.
 - Máximo 10 palabras de 10 caracteres.
 - `SharedPreferences` para la lista.
 - Formato exacto de `PAL` y `CFG,PAL`.
@@ -178,4 +224,13 @@ Agregar una sección **"Mejoras v2"** y corregir:
 - Ubicación de la pantalla "Palabras".
 - Textos exactos de las plantillas.
 
-**Por verificar en Tinkercad:** que la librería `EEPROM` persista dentro de la simulación y que el sketch quepa en la flash con el modo palabras.
+**Por verificar en Tinkercad:**
+- Que la librería `EEPROM` persista dentro de la simulación.
+- Que los dos sketches quepan en la flash.
+- Que el serial por hardware entre dos placas conviva con el Monitor serie.
+
+**Pendiente del usuario:**
+- Si tendrán Uno físico + HM-10 + teléfono Android (sin eso, 5.9 se construye pero no se prueba de punta a punta).
+- Reparto con el colega.
+- `.docx` del informe.
+- Fecha de entrega.
