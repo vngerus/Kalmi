@@ -57,7 +57,7 @@ import cl.kalmi.app.ui.theme.titulo
  * - `XContenido(...)` recibe datos simples + lambdas: sin ViewModel, así tiene @Preview.
  */
 @Composable
-fun InicioScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
+fun InicioScreen(vm: KalmiViewModel, modifier: Modifier = Modifier, onResponder: () -> Unit = {}) {
     val conexion by vm.conexion.collectAsStateWithLifecycle()
     val bateria by vm.bateria.collectAsStateWithLifecycle()
     val alerta by vm.alerta.collectAsStateWithLifecycle()
@@ -69,6 +69,7 @@ fun InicioScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
         onAtendido = { vm.marcarAtendido() },
         onAcierto = { seq, acerto -> vm.marcarAcierto(seq, acerto) },
         onConectar = rememberConectar(vm),
+        onResponder = onResponder,
         modifier = modifier,
     )
 }
@@ -83,6 +84,7 @@ fun InicioContenido(
     onAtendido: () -> Unit,
     onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
     onConectar: () -> Unit = {},
+    onResponder: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -92,7 +94,7 @@ fun InicioContenido(
         Encabezado("Inicio")
 
         Heroe(conexion, bateria, alerta, onConectar)
-        alerta?.let { TarjetaAlerta(it, onAtendido, onAcierto) }
+        alerta?.let { TarjetaAlerta(it, onAtendido, onAcierto, onResponder) }
 
         val ayudas = historial.count { it.emocion == Emocion.AYUDA }
         val conPalabras = historial.count { it.emocion == null }
@@ -117,7 +119,7 @@ fun InicioContenido(
 }
 
 @Composable
-private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Boolean) -> Unit) {
+private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Boolean) -> Unit, onResponder: () -> Unit) {
     TarjetaFranja(franja = e.colorTema, fondo = e.fondoTema) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (e.emocion != null) {
@@ -152,7 +154,10 @@ private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Bo
                     )
                 }
             }
-            Button(onClick = onAtendido, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Marcar como atendido") }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = onResponder, modifier = Modifier.weight(1f).height(48.dp)) { Text("Responder") }
+                OutlinedButton(onClick = onAtendido, modifier = Modifier.weight(1f).height(48.dp)) { Text("Atendido") }
+            }
         }
     }
 }

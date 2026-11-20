@@ -63,11 +63,16 @@ fun PalabrasContenido(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Encabezado("Palabras")
-        Text(
-            "El niño las recorre con el botón Quiero. Elige las que más use en su día.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("¿Cómo funciona?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                listOf(
+                    "1. El niño recorre estas palabras con el botón Quiero de Kalmi.",
+                    "2. Te llega un aviso con lo que Kalmi cree que quiso decir.",
+                    "3. Respondes desde Acompañar y nos dices si acertó.",
+                ).forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) }
+            }
+        }
 
         Text("Siempre disponibles", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

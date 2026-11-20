@@ -1,5 +1,11 @@
 package cl.kalmi.app.ui.controles
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import cl.kalmi.app.domain.Avisos
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -88,6 +94,7 @@ fun ControlesScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
         rttMs = calidad.ultimoRttMs,
         onEnviar = { vm.enviar(it) },
         onAtendido = { vm.marcarAtendido() },
+        onAcierto = { seq, acerto -> vm.marcarAcierto(seq, acerto) },
         onConectar = rememberConectar(vm),
         modifier = modifier,
     )
@@ -103,7 +110,9 @@ fun ControlesContenido(
     onAtendido: () -> Unit,
     onConectar: () -> Unit,
     modifier: Modifier = Modifier,
+    onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
 ) {
+    val sugerida = alerta?.let(Avisos::respuestaSugerida)
     // El brillo se envía al soltar el deslizador y solo si cambió lo suficiente (máx. 1 envío por gesto).
     var brillo by rememberSaveable { mutableFloatStateOf(BRILLO_INICIAL.toFloat()) }
     var brilloEnviado by rememberSaveable { mutableIntStateOf(BRILLO_INICIAL) }
@@ -114,12 +123,14 @@ fun ControlesContenido(
     ) {
         Encabezado("Acompañar")
 
-        Contexto(conectado, alerta, onAtendido, onConectar)
+        Contexto(conectado, alerta, onAtendido, onConectar, onAcierto)
 
         Text("Envíale un mensaje", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MENSAJES.forEachIndexed { k, m ->
-                TarjetaMensaje(m, habilitado = conectado, modifier = Modifier.weight(1f)) { onEnviar(Comando.Mensaje(k)) }
+                TarjetaMensaje(m, habilitado = conectado, sugerida = k == sugerida, modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    onEnviar(Comando.Mensaje(k))
+                }
             }
         }
 
@@ -155,7 +166,13 @@ fun ControlesContenido(
 
 /** Arriba, lo que está pasando: así el cuidador responde en contexto. */
 @Composable
-private fun Contexto(conectado: Boolean, alerta: Evento?, onAtendido: () -> Unit, onConectar: () -> Unit) {
+private fun Contexto(
+    conectado: Boolean,
+    alerta: Evento?,
+    onAtendido: () -> Unit,
+    onConectar: () -> Unit,
+    onAcierto: (Int, Boolean) -> Unit,
+) {
     val color = alerta?.colorTema ?: if (conectado) KalmiColors.Bien else KalmiColors.Calma
     Box(
         Modifier
@@ -186,6 +203,17 @@ private fun Contexto(conectado: Boolean, alerta: Evento?, onAtendido: () -> Unit
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Palabras: qué eligió y por qué Kalmi cree eso; el cuidador confirma.
+                alerta?.interpretacion?.let { i ->
+                    Text(i.razon, style = MaterialTheme.typography.bodySmall)
+                    if (alerta.acerto == null) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("¿Acertó?", style = MaterialTheme.typography.labelLarge)
+                            FilledTonalButton(onClick = { onAcierto(alerta.seq, true) }, modifier = Modifier.height(36.dp)) { Text("Sí") }
+                            OutlinedButton(onClick = { onAcierto(alerta.seq, false) }, modifier = Modifier.height(36.dp)) { Text("No") }
+                        }
+                    }
+                }
                 when {
                     alerta != null -> Button(onClick = onAtendido, modifier = Modifier.padding(top = 4.dp).height(40.dp)) { Text("Marcar como atendido") }
                     !conectado -> Button(onClick = onConectar, modifier = Modifier.padding(top = 4.dp).height(40.dp)) { Text("Conectar con Kalmi") }
@@ -196,11 +224,12 @@ private fun Contexto(conectado: Boolean, alerta: Evento?, onAtendido: () -> Unit
 }
 
 @Composable
-private fun TarjetaMensaje(m: Mensaje, habilitado: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun TarjetaMensaje(m: Mensaje, habilitado: Boolean, sugerida: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val alfa = if (habilitado) 1f else 0.45f
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = m.color.copy(alpha = 0.16f * alfa),
+        color = m.color.copy(alpha = (if (sugerida) 0.30f else 0.16f) * alfa),
+        border = if (sugerida && habilitado) BorderStroke(2.dp, m.color) else null,
         modifier = modifier
             .heightIn(min = 104.dp)
             .clip(MaterialTheme.shapes.medium)
@@ -216,6 +245,9 @@ private fun TarjetaMensaje(m: Mensaje, habilitado: Boolean, modifier: Modifier, 
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(m.icono, contentDescription = null, tint = Color.White)
+            }
+            if (sugerida && habilitado) {
+                Text("Sugerido", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(
                 m.texto,

@@ -1,5 +1,11 @@
 package cl.kalmi.app
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import cl.kalmi.app.service.Notificador
+import android.os.Bundle
+import android.app.Activity
 import android.app.Application
 import android.content.Context
 import cl.kalmi.app.data.KalmiRepository
@@ -44,6 +50,29 @@ class KalmiApp : Application() {
                 ?: Vocabulario.PERSONALES_DEFECTO,
             guardarPersonales = { prefs.edit().putString(CLAVE_PERSONALES, it.joinToString("\n")).apply() },
         )
+    }
+
+    private var pantallasVisibles = 0
+    val enPrimerPlano: Boolean get() = pantallasVisibles > 0
+
+    override fun onCreate() {
+        super.onCreate()
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityStarted(a: Activity) { pantallasVisibles++ }
+            override fun onActivityStopped(a: Activity) { pantallasVisibles-- }
+            override fun onActivityCreated(a: Activity, b: Bundle?) = Unit
+            override fun onActivityResumed(a: Activity) = Unit
+            override fun onActivityPaused(a: Activity) = Unit
+            override fun onActivitySaveInstanceState(a: Activity, b: Bundle) = Unit
+            override fun onActivityDestroyed(a: Activity) = Unit
+        })
+        // Cada aviso nuevo de Kalmi → notificación, solo si la app no está a la vista (ahí ya se ve en Inicio).
+        val notificador = Notificador(this)
+        appScope.launch {
+            repository.alertaActual.filterNotNull().distinctUntilChangedBy { it.seq }.collect {
+                if (!enPrimerPlano) notificador.mostrar(it)
+            }
+        }
     }
 
     private companion object {

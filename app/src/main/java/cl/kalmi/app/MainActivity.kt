@@ -1,5 +1,7 @@
 package cl.kalmi.app
 
+import androidx.compose.runtime.LaunchedEffect
+import android.content.Intent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
@@ -64,13 +66,28 @@ private enum class Pestana(val titulo: String, val icono: ImageVector) {
 }
 
 class MainActivity : ComponentActivity() {
+
+    /** Pestaña pedida por una notificación ("Toca para acompañarlo"). */
+    private val pestanaPedida = mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        pestanaPedida.value = intent.getStringExtra(EXTRA_PESTANA)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        pestanaPedida.value = intent.getStringExtra(EXTRA_PESTANA)
         setContent {
             KalmiTheme {
                 val vm: KalmiViewModel = viewModel(factory = KalmiViewModel.Factory)
                 var actual by rememberSaveable { mutableStateOf(Pestana.INICIO) }
+                val pedida by pestanaPedida
+                LaunchedEffect(pedida) {
+                    if (pedida == PESTANA_ACOMPANAR) actual = Pestana.CONTROLES
+                    pestanaPedida.value = null
+                }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -79,7 +96,7 @@ class MainActivity : ComponentActivity() {
                 ) { padding ->
                     val mod = Modifier.padding(padding)
                     when (actual) {
-                        Pestana.INICIO -> InicioScreen(vm, mod)
+                        Pestana.INICIO -> InicioScreen(vm, mod, onResponder = { actual = Pestana.CONTROLES })
                         Pestana.CONTROLES -> ControlesScreen(vm, mod)
                         Pestana.HISTORIAL -> HistorialScreen(vm, mod)
                         Pestana.PALABRAS -> PalabrasScreen(vm, mod)
@@ -88,6 +105,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_PESTANA = "pestana"
+        const val PESTANA_ACOMPANAR = "acompanar"
     }
 }
 
