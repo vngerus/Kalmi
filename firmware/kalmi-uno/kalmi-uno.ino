@@ -384,8 +384,10 @@ void enviarPalabras() {
 }
 
 // ---------------------------- Estados --------------------------------
-void irA(Estado e) {
-  estado = e;
+// Recibe byte y no Estado: Tinkercad genera los prototipos antes del enum y con Estado
+// falla con "invalid header file".
+void irA(byte e) {
+  estado = (Estado)e;
   desde = millis();
   redibujar = true;
   if (e == REPOSO) {
