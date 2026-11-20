@@ -83,7 +83,12 @@ class KalmiRepository(
             }
         }
         scope.launch {
-            device.estado.collect { if (it is EstadoConexion.Conectado) enviarPersonales() }
+            device.estado.collect {
+                if (it is EstadoConexion.Conectado) {
+                    reiniciarSeq() // Kalmi pudo reiniciarse: su seq salta y no son mensajes perdidos
+                    enviarPersonales()
+                }
+            }
         }
     }
 
@@ -118,7 +123,15 @@ class KalmiRepository(
         return true
     }
 
+    // ponytail: la dedupe vale por conexión; un reintento que cruce una reconexión se mostraría dos veces (raro).
+    private fun reiniciarSeq() {
+        ultimoSeq = 0
+        eventosVistos.clear()
+    }
+
     private fun alRecibirTelemetria(m: MensajeKalmi.Tel) {
+        // TEL nunca se reintenta: si su seq no avanza, es otro Kalmi o uno con EEPROM nueva.
+        if (m.seq <= ultimoSeq) reiniciarSeq()
         registrarSeq(m.seq)
         _telemetria.value = Telemetria(m.seq, m.luz, m.presion, reloj())
         // Tensión: 3 lecturas seguidas ≥ 75; se rearma bajo 60 (histéresis).

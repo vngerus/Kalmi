@@ -140,6 +140,33 @@ class KalmiRepositoryTest {
         assertEquals(Emocion.TRISTE, repo.historial.value.single().emocion)
     }
 
+    @Test fun reconectarNoCuentaElSaltoDeSeqComoPerdida() = runTest {
+        val repo = crearRepo()
+        recibir("TEL,10,70,20")
+
+        // Kalmi se reinicia: al volver, su seq salta ~50 (lo que guardó en EEPROM + margen).
+        device.estado.value = EstadoConexion.Desconectado
+        runCurrent()
+        device.estado.value = EstadoConexion.Conectado("Kalmi-TEST")
+        runCurrent()
+        recibir("TEL,61,70,20", "TEL,62,70,20")
+
+        assertEquals(0, repo.calidad.value.perdidos)
+        assertEquals(3, repo.calidad.value.recibidos)
+    }
+
+    @Test fun seqQueRetrocedeEsKalmiNuevoYSusEventosSeMuestran() = runTest {
+        val repo = crearRepo()
+        recibir("EVT,6,E1", "TEL,7,70,20")
+
+        // Sin desconectar, llega un Kalmi con EEPROM nueva (o se cambió de simulador a real): seq vuelve a empezar.
+        recibir("TEL,5,70,20", "EVT,6,E3")
+
+        assertEquals(2, repo.historial.value.size)
+        assertEquals(Emocion.FRUSTRADO, repo.alertaActual.value?.emocion)
+        assertEquals(0, repo.calidad.value.perdidos)
+    }
+
     @Test fun lineaCorruptaSeDescarta() = runTest {
         val repo = crearRepo()
 
