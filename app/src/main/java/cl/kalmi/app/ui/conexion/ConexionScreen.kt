@@ -53,6 +53,7 @@ fun ConexionScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
         onDesconectar = { vm.desconectar() },
         modifier = modifier,
         onSimular = simulador?.let { sim -> { e: Emocion -> sim.simularBoton(e.codigo) } },
+        onSimularPalabras = { simulador?.simularPalabras() },
         perdida = perdida,
         onPerdida = {
             perdida = it
@@ -71,6 +72,7 @@ fun ConexionContenido(
     onDesconectar: () -> Unit,
     modifier: Modifier = Modifier,
     onSimular: ((Emocion) -> Unit)? = null,
+    onSimularPalabras: () -> Unit = {},
     perdida: Float = 0f,
     onPerdida: (Float) -> Unit = {},
 ) {
@@ -102,7 +104,7 @@ fun ConexionContenido(
 
         Diagnostico(calidad)
 
-        if (onSimular != null) PanelDepuracion(conectado, onSimular, perdida, onPerdida)
+        if (onSimular != null) PanelDepuracion(conectado, onSimular, onSimularPalabras, perdida, onPerdida)
     }
 }
 
@@ -132,6 +134,7 @@ private fun Dato(nombre: String, valor: String) {
 private fun PanelDepuracion(
     conectado: Boolean,
     onSimular: (Emocion) -> Unit,
+    onSimularPalabras: () -> Unit,
     perdida: Float,
     onPerdida: (Float) -> Unit,
 ) {
@@ -146,6 +149,7 @@ private fun PanelDepuracion(
                     OutlinedButton(onClick = { onSimular(e) }, enabled = conectado) { Text(e.nombre) }
                 }
             }
+            OutlinedButton(onClick = onSimularPalabras, enabled = conectado) { Text("Simular palabras") }
             Text("Pérdida simulada ${(perdida * 100).roundToInt()}%", style = MaterialTheme.typography.bodyMedium)
             Slider(value = perdida, onValueChange = onPerdida, valueRange = 0f..0.9f)
         }

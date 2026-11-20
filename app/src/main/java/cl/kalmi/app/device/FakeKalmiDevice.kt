@@ -59,7 +59,8 @@ class FakeKalmiDevice(private val scope: CoroutineScope) : KalmiDevice {
             launch { // eventos aleatorios cada 15–40 s
                 while (isActive) {
                     delay((15_000L..40_000L).random())
-                    emitirEvento((1..5).random())
+                    // 1 de cada 3 avisos son palabras (1–2 índices), el resto emociones.
+                    if (Random.nextInt(3) == 0) emitirPalabras(indicesAzar()) else emitirEvento((1..5).random())
                 }
             }
         }
@@ -70,12 +71,24 @@ class FakeKalmiDevice(private val scope: CoroutineScope) : KalmiDevice {
         if (estado.value is EstadoConexion.Conectado) scope.launch { emitirEvento(codigo) }
     }
 
-    private suspend fun emitirEvento(codigo: Int) {
+    /** Depuración: simula que el niño elige palabras con el botón Quiero (índices 0–9). */
+    fun simularPalabras(indices: List<Int> = indicesAzar()) {
+        if (estado.value is EstadoConexion.Conectado) scope.launch { emitirPalabras(indices) }
+    }
+
+    private fun indicesAzar() = List((1..2).random()) { (0..9).random() }
+
+    private suspend fun emitirEvento(codigo: Int) = emitirConReintento { s -> "EVT,$s,E$codigo" }
+
+    private suspend fun emitirPalabras(indices: List<Int>) =
+        emitirConReintento { s -> "PAL,$s," + indices.joinToString(",") }
+
+    /** Envío original + hasta 3 reintentos cada 1,5 s mientras no llegue ACK (como el firmware). */
+    private suspend fun emitirConReintento(cuerpo: (seq: Int) -> String) {
         val s = ++seq
         pendientes[s] = 0
-        // Envío original + hasta 3 reintentos cada 1,5 s mientras no llegue ACK.
         while ((pendientes[s] ?: return) <= 3) {
-            emitir("EVT,$s,E$codigo")
+            emitir(cuerpo(s))
             delay(1_500)
             pendientes[s]?.let { pendientes[s] = it + 1 } ?: return
         }
@@ -88,6 +101,7 @@ class FakeKalmiDevice(private val scope: CoroutineScope) : KalmiDevice {
         val m = linea.substringBefore('*').split(",")
         when (m[0]) {
             "ACK" -> pendientes.remove(m[1].toInt())
+            "CFG" -> if (m.getOrNull(1) == "PAL") emitir("CFG,PAL,OK")
             "CMD" -> {
                 delay((20L..60L).random())
                 emitir("OK,${m[1]}")
