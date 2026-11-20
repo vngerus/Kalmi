@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.Context
 import cl.kalmi.app.data.KalmiRepository
 import cl.kalmi.app.device.FakeKalmiDevice
-import cl.kalmi.app.device.KalmiDevice
+import cl.kalmi.app.device.DispositivoConmutable
 import cl.kalmi.app.device.ble.BleKalmiDevice
 import cl.kalmi.app.device.ble.PerfilBle
 import cl.kalmi.app.domain.Vocabulario
@@ -19,14 +19,20 @@ class KalmiApp : Application() {
 
     private val prefs by lazy { getSharedPreferences("kalmi", Context.MODE_PRIVATE) }
 
-    /** En release siempre el Kalmi real. En debug se elige en Conexión (se aplica al reiniciar la app). */
-    var usarDispositivoReal: Boolean
-        get() = !BuildConfig.DEBUG || prefs.getBoolean(CLAVE_REAL, false)
-        set(valor) = prefs.edit().putBoolean(CLAVE_REAL, valor).apply()
+    val simulador by lazy { FakeKalmiDevice(appScope) }
+    private val real by lazy { BleKalmiDevice(this, appScope, PerfilBle.HM10) }
 
-    // ponytail: se elige al iniciar; cambio en caliente si molesta en las demos.
-    val device: KalmiDevice by lazy {
-        if (usarDispositivoReal) BleKalmiDevice(this, appScope, PerfilBle.HM10) else FakeKalmiDevice(appScope)
+    /** Ajustes → Modo de prueba. Encendido = simulador (por defecto en builds debug). */
+    val modoPrueba: Boolean get() = prefs.getBoolean(CLAVE_PRUEBA, BuildConfig.DEBUG)
+
+    val device: DispositivoConmutable by lazy {
+        DispositivoConmutable(appScope, if (modoPrueba) simulador else real)
+    }
+
+    /** Cambia en caliente entre simulador y Kalmi real; queda guardado. */
+    suspend fun cambiarModoPrueba(activo: Boolean) {
+        prefs.edit().putBoolean(CLAVE_PRUEBA, activo).apply()
+        device.cambiar(if (activo) simulador else real)
     }
 
     val repository: KalmiRepository by lazy {
@@ -42,6 +48,6 @@ class KalmiApp : Application() {
 
     private companion object {
         const val CLAVE_PERSONALES = "personales"
-        const val CLAVE_REAL = "real"
+        const val CLAVE_PRUEBA = "modo_prueba"
     }
 }

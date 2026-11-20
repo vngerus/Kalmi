@@ -8,22 +8,25 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import cl.kalmi.app.KalmiApp
 import cl.kalmi.app.data.KalmiRepository
 import cl.kalmi.app.device.FakeKalmiDevice
-import cl.kalmi.app.device.KalmiDevice
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import cl.kalmi.app.domain.Comando
 import kotlinx.coroutines.launch
 
-// ponytail: un ViewModel compartido por las 4 pantallas. Separar por pantalla si alguna crece.
+// ponytail: un ViewModel compartido por las 5 pantallas. Separar por pantalla si alguna crece.
 class KalmiViewModel(
     private val repo: KalmiRepository,
-    device: KalmiDevice,
-    private val app: KalmiApp? = null,
+    private val app: KalmiApp,
 ) : ViewModel() {
 
-    /** true = BleKalmiDevice (HM-10). Cambiarlo se aplica al reiniciar la app. */
-    var usarReal: Boolean
-        get() = app?.usarDispositivoReal ?: false
-        set(valor) { app?.usarDispositivoReal = valor }
-    val usandoReal = device !is FakeKalmiDevice
+    /** Ajustes → Modo de prueba: true = simulador + diagnóstico + panel de pruebas. */
+    val modoPrueba: StateFlow<Boolean> = app.device.actual
+        .map { it is FakeKalmiDevice }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, app.modoPrueba)
+
+    fun cambiarModoPrueba(activo: Boolean) = viewModelScope.launch { app.cambiarModoPrueba(activo) }
 
     val conexion = repo.estadoConexion
     val telemetria = repo.telemetria
@@ -34,8 +37,7 @@ class KalmiViewModel(
     val historial = repo.historial
     val personales = repo.personales
 
-    /** No null solo con el simulador: habilita el panel de depuración. */
-    val simulador = device as? FakeKalmiDevice
+    val simulador: FakeKalmiDevice get() = app.simulador
 
     fun conectar() = viewModelScope.launch { repo.conectar() }
     fun desconectar() = viewModelScope.launch { repo.desconectar() }
@@ -48,7 +50,7 @@ class KalmiViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as KalmiApp
-                KalmiViewModel(app.repository, app.device, app)
+                KalmiViewModel(app.repository, app)
             }
         }
     }

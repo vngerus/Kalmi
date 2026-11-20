@@ -1,11 +1,14 @@
 package cl.kalmi.app
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.BorderStroke
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,7 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.kalmi.app.ui.KalmiViewModel
-import cl.kalmi.app.ui.conexion.ConexionScreen
+import cl.kalmi.app.ui.ajustes.AjustesScreen
 import cl.kalmi.app.ui.controles.ControlesScreen
 import cl.kalmi.app.ui.historial.HistorialScreen
 import cl.kalmi.app.ui.inicio.InicioScreen
@@ -57,7 +60,7 @@ private enum class Pestana(val titulo: String, val icono: ImageVector) {
     CONTROLES("Acompañar", Icons.Filled.Favorite),
     HISTORIAL("Historial", Icons.Filled.DateRange),
     PALABRAS("Palabras", Icons.Filled.Edit),
-    CONEXION("Conexión", Icons.Filled.Settings),
+    AJUSTES("Ajustes", Icons.Filled.Settings),
 }
 
 class MainActivity : ComponentActivity() {
@@ -67,7 +70,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             KalmiTheme {
                 val vm: KalmiViewModel = viewModel(factory = KalmiViewModel.Factory)
-                var actual by rememberSaveable { mutableStateOf(Pestana.CONEXION) }
+                var actual by rememberSaveable { mutableStateOf(Pestana.INICIO) }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -80,7 +83,7 @@ class MainActivity : ComponentActivity() {
                         Pestana.CONTROLES -> ControlesScreen(vm, mod)
                         Pestana.HISTORIAL -> HistorialScreen(vm, mod)
                         Pestana.PALABRAS -> PalabrasScreen(vm, mod)
-                        Pestana.CONEXION -> ConexionScreen(vm, mod)
+                        Pestana.AJUSTES -> AjustesScreen(vm, mod)
                     }
                 }
             }
@@ -89,59 +92,58 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Barra flotante tipo píldora: la pestaña activa se expande con ícono + texto,
- * las demás muestran solo el ícono (con descripción para lectores de pantalla).
+ * Barra de navegación flotante: ítems de igual ancho (se adapta a cualquier pantalla),
+ * ícono + texto siempre visibles, indicador suave detrás del ícono activo.
  */
 @Composable
 private fun BarraNavegacion(actual: Pestana, onElegir: (Pestana) -> Unit) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 10.dp,
-            tonalElevation = 0.dp,
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 8.dp)
-                    .selectableGroup(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Pestana.entries.forEach { p -> ItemBarra(p, p == actual) { onElegir(p) } }
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).selectableGroup()) {
+                Pestana.entries.forEach { p -> ItemBarra(p, p == actual, Modifier.weight(1f)) { onElegir(p) } }
             }
         }
     }
 }
 
 @Composable
-private fun ItemBarra(p: Pestana, elegida: Boolean, onClick: () -> Unit) {
+private fun ItemBarra(p: Pestana, elegida: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val fondo by animateColorAsState(
         if (elegida) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
         label = "fondo",
     )
-    val tinta = if (elegida) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
-        Modifier
-            .clip(CircleShape)
-            .background(fondo)
+    val tinta = if (elegida) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
             .selectable(selected = elegida, onClick = onClick, role = Role.Tab)
-            .animateContentSize()
-            .height(48.dp)
-            .padding(horizontal = if (elegida) 16.dp else 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Icon(p.icono, contentDescription = if (elegida) null else p.titulo, tint = tinta)
-        if (elegida) {
-            Text(p.titulo, color = tinta, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        Box(
+            Modifier.clip(CircleShape).background(fondo).padding(horizontal = 18.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(p.icono, contentDescription = null, tint = if (elegida) MaterialTheme.colorScheme.onPrimaryContainer else tinta)
         }
+        Text(
+            p.titulo,
+            color = tinta,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (elegida) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

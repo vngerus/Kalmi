@@ -1,5 +1,8 @@
 package cl.kalmi.app.ui.inicio
 
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
+import cl.kalmi.app.ui.rememberConectar
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
@@ -65,6 +68,7 @@ fun InicioScreen(vm: KalmiViewModel, modifier: Modifier = Modifier) {
         conexion, bateria, alerta, tel, historial,
         onAtendido = { vm.marcarAtendido() },
         onAcierto = { seq, acerto -> vm.marcarAcierto(seq, acerto) },
+        onConectar = rememberConectar(vm),
         modifier = modifier,
     )
 }
@@ -78,15 +82,16 @@ fun InicioContenido(
     historial: List<Evento>,
     onAtendido: () -> Unit,
     onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
+    onConectar: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Encabezado("Inicio", conexion, bateria)
+        Encabezado("Inicio")
 
-        Heroe(conexion, alerta)
+        Heroe(conexion, bateria, alerta, onConectar)
         alerta?.let { TarjetaAlerta(it, onAtendido, onAcierto) }
 
         val ayudas = historial.count { it.emocion == Emocion.AYUDA }
@@ -154,14 +159,16 @@ private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Bo
 
 /** Kalmi en grande, como en las apps de los robots compañeros: su cara y el fondo cuentan el estado. */
 @Composable
-private fun Heroe(conexion: EstadoConexion, alerta: Evento?) {
+private fun Heroe(conexion: EstadoConexion, bateria: Int?, alerta: Evento?, onConectar: () -> Unit) {
     val conectado = conexion is EstadoConexion.Conectado
     val color = alerta?.colorTema ?: if (conectado) KalmiColors.Bien else KalmiColors.Calma
     val (titulo, subtitulo) = when {
         alerta != null && alerta.emocion == null -> "Kalmi quiere decirte algo" to "Mira lo que eligió abajo."
         alerta != null -> "Se siente ${alerta.titulo.lowercase()}" to "Kalmi ya lo está acompañando."
         conectado -> "Todo tranquilo" to "Te avisaremos si necesita algo."
-        else -> "Kalmi descansa" to "Conéctalo desde la pestaña Conexión."
+        conexion is EstadoConexion.Buscando || conexion is EstadoConexion.Conectando -> "Buscando a Kalmi…" to "Mantén el teléfono cerca."
+        conexion is EstadoConexion.Error -> "No encontramos a Kalmi" to conexion.mensaje
+        else -> "Kalmi descansa" to "Conéctalo para recibir sus avisos."
     }
     Box(
         Modifier
@@ -172,9 +179,17 @@ private fun Heroe(conexion: EstadoConexion, alerta: Evento?) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CaraKalmi(color, tamano = 132.dp, dormido = !conectado && alerta == null, expresion = alerta?.emocion)
+            // Responsivo: en teléfonos bajos (≤ 700 dp) la mascota se achica para dejar ver el resumen.
+            val tamano = if (LocalConfiguration.current.screenHeightDp <= 700) 96.dp else 132.dp
+            CaraKalmi(color, tamano = tamano, dormido = !conectado && alerta == null, expresion = alerta?.emocion)
             Text(titulo, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Text(subtitulo, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(subtitulo, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            if (conectado && bateria != null) {
+                Text("Batería de Kalmi: $bateria %", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (!conectado && alerta == null) {
+                Button(onClick = onConectar, modifier = Modifier.padding(top = 8.dp).height(48.dp)) { Text("Conectar con Kalmi") }
+            }
         }
     }
 }
