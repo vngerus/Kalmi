@@ -1,5 +1,7 @@
 package cl.kalmi.app
 
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -53,13 +55,18 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
-                        NavigationBar {
+                        NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                             Pestana.entries.forEach { p ->
                                 NavigationBarItem(
                                     selected = p == actual,
                                     onClick = { actual = p },
                                     icon = { Icon(p.icono, contentDescription = null) },
                                     label = { Text(p.titulo) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    ),
                                 )
                             }
                         }

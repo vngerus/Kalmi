@@ -1,5 +1,6 @@
 package cl.kalmi.app.ui.controles
 
+import cl.kalmi.app.ui.Encabezado
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -70,7 +71,7 @@ fun ControlesContenido(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Controles", style = MaterialTheme.typography.headlineSmall)
+        Encabezado("Controles")
 
         if (!conectado) {
             Text(

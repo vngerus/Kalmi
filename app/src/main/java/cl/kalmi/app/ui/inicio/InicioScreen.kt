@@ -1,22 +1,30 @@
 package cl.kalmi.app.ui.inicio
 
-import android.text.format.DateUtils
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,11 +34,19 @@ import cl.kalmi.app.domain.EstadoConexion
 import cl.kalmi.app.domain.Evento
 import cl.kalmi.app.domain.Interpretacion
 import cl.kalmi.app.domain.Telemetria
+import cl.kalmi.app.ui.BarraSuave
+import cl.kalmi.app.ui.CaraKalmi
+import cl.kalmi.app.ui.Encabezado
+import cl.kalmi.app.ui.Indicador
 import cl.kalmi.app.ui.KalmiViewModel
+import cl.kalmi.app.ui.TarjetaFranja
+import cl.kalmi.app.ui.haceCuanto
+import cl.kalmi.app.ui.theme.KalmiColors
 import cl.kalmi.app.ui.theme.KalmiTheme
 import cl.kalmi.app.ui.theme.colorTema
-import cl.kalmi.app.ui.theme.titulo
 import cl.kalmi.app.ui.theme.fondoTema
+import cl.kalmi.app.ui.theme.tintaTema
+import cl.kalmi.app.ui.theme.titulo
 
 /**
  * Patrón de referencia para las demás pantallas:
@@ -64,67 +80,113 @@ fun InicioContenido(
     onAcierto: (seq: Int, acerto: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            text = (if (conexion is EstadoConexion.Conectado) "● Conectado (BLE)" else "○ Sin conexión") +
-                (bateria?.let { "    🔋 $it%" } ?: ""),
-            style = MaterialTheme.typography.labelLarge,
-        )
+    Column(
+        modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Encabezado("Inicio", conexion, bateria)
 
-        if (alerta != null) TarjetaAlerta(alerta, onAtendido, onAcierto) else TarjetaTranquilo()
-
-        tel?.let {
-            Barra("Luz", it.luz)
-            Barra("Presión", it.presion)
-        }
+        Heroe(conexion, alerta)
+        alerta?.let { TarjetaAlerta(it, onAtendido, onAcierto) }
 
         val ayudas = historial.count { it.emocion == Emocion.AYUDA }
         val conPalabras = historial.count { it.emocion == null }
-        Text(
-            "Hoy: ${historial.size - ayudas - conPalabras} emociones · $conPalabras con palabras · $ayudas ayuda",
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Text("Hoy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Indicador("${historial.size - ayudas - conPalabras}", "Emociones", KalmiColors.Bien, Modifier.weight(1f))
+            Indicador("$conPalabras", "Palabras", KalmiColors.Calma, Modifier.weight(1f))
+            Indicador("$ayudas", "Ayuda", KalmiColors.MuyEnojado, Modifier.weight(1f))
+        }
+        if (historial.isNotEmpty()) TiraDelDia(historial)
+
+        tel?.let {
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Sensores de Kalmi", style = MaterialTheme.typography.titleSmall)
+                    BarraSuave("Luz", it.luz, KalmiColors.Frustrado)
+                    BarraSuave("Presión en la zona de calma", it.presion, KalmiColors.Calma)
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun TarjetaAlerta(e: Evento, onAtendido: () -> Unit, onAcierto: (Int, Boolean) -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = e.fondoTema),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(e.titulo, style = MaterialTheme.typography.headlineSmall, color = e.colorTema)
-            Text(DateUtils.getRelativeTimeSpanString(e.momento).toString())
+    TarjetaFranja(franja = e.colorTema, fondo = e.fondoTema) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (e.emocion != null) {
+                Text(
+                    "Avisó ${haceCuanto(e.momento)} · ¿vas a acompañarlo?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    e.titulo,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = e.tintaTema,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(haceCuanto(e.momento), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             e.interpretacion?.let { i ->
-                Text("Porque: ${i.razon}", style = MaterialTheme.typography.bodySmall)
+                Text("Kalmi cree esto porque: ${i.razon.replaceFirstChar { it.lowercase() }}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (e.acerto == null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("¿Acertó?", style = MaterialTheme.typography.labelLarge)
-                        OutlinedButton(onClick = { onAcierto(e.seq, true) }) { Text("Sí") }
+                        Text("¿Acertó?", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                        FilledTonalButton(onClick = { onAcierto(e.seq, true) }) { Text("Sí") }
                         OutlinedButton(onClick = { onAcierto(e.seq, false) }) { Text("No") }
                     }
                 } else {
-                    Text(if (e.acerto) "✓ Confirmado por ti" else "✗ Marcado como no acertado", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        if (e.acerto) "✓ Confirmaste la interpretación" else "Anotado: no acertó",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
-            Button(onClick = onAtendido) { Text("Marcar como atendido") }
+            Button(onClick = onAtendido, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Marcar como atendido") }
         }
     }
 }
 
+/** Kalmi en grande, como en las apps de los robots compañeros: su cara y el fondo cuentan el estado. */
 @Composable
-private fun TarjetaTranquilo() {
-    Card(Modifier.fillMaxWidth()) {
-        Text("Todo tranquilo", Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+private fun Heroe(conexion: EstadoConexion, alerta: Evento?) {
+    val conectado = conexion is EstadoConexion.Conectado
+    val color = alerta?.colorTema ?: if (conectado) KalmiColors.Bien else KalmiColors.Calma
+    val (titulo, subtitulo) = when {
+        alerta != null && alerta.emocion == null -> "Kalmi quiere decirte algo" to "Mira lo que eligió abajo."
+        alerta != null -> "Se siente ${alerta.titulo.lowercase()}" to "Kalmi ya lo está acompañando."
+        conectado -> "Todo tranquilo" to "Te avisaremos si necesita algo."
+        else -> "Kalmi descansa" to "Conéctalo desde la pestaña Conexión."
+    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(Brush.verticalGradient(listOf(color.copy(alpha = 0.30f), color.copy(alpha = 0.06f))))
+            .padding(vertical = 28.dp, horizontal = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CaraKalmi(color, tamano = 132.dp, dormido = !conectado && alerta == null, expresion = alerta?.emocion)
+            Text(titulo, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(subtitulo, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
+/** El día de un vistazo: un punto por aviso, del más antiguo al más nuevo. */
 @Composable
-private fun Barra(nombre: String, valor: Int) {
-    Column {
-        Text("$nombre $valor%", style = MaterialTheme.typography.bodySmall)
-        LinearProgressIndicator(progress = { valor / 100f }, modifier = Modifier.fillMaxWidth())
+private fun TiraDelDia(historial: List<Evento>) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        historial.take(16).reversed().forEach { e ->
+            Box(Modifier.size(14.dp).clip(CircleShape).background(e.colorTema))
+        }
+        if (historial.size > 16) Text("+${historial.size - 16}", style = MaterialTheme.typography.labelSmall)
     }
 }
 

@@ -1,5 +1,12 @@
 package cl.kalmi.app.ui.palabras
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import cl.kalmi.app.ui.Encabezado
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,33 +59,56 @@ fun PalabrasContenido(
     Column(
         modifier
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("Palabras de Kalmi", style = MaterialTheme.typography.headlineSmall)
+        Encabezado("Palabras")
         Text(
             "El niño las recorre con el botón Quiero. Elige las que más use en su día.",
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Text("Siempre disponibles", style = MaterialTheme.typography.titleMedium)
-        Text(Vocabulario.NUCLEO.joinToString(" · "), style = MaterialTheme.typography.bodyLarge)
+        Text("Siempre disponibles", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Vocabulario.NUCLEO.forEach { palabra ->
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.weight(1f).height(64.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(palabra, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
+            }
+        }
 
-        Text("Personales", style = MaterialTheme.typography.titleMedium)
-        borrador.forEachIndexed { i, texto ->
-            OutlinedTextField(
-                value = texto,
-                onValueChange = { borrador[i] = it.take(MAX_CARACTERES) },
-                label = { Text("Palabra ${i + 1}") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+        Text("Personales", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Hasta $MAX_CARACTERES letras: es lo que cabe en la pantalla de Kalmi.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        borrador.indices.chunked(2).forEach { fila ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                fila.forEach { i ->
+                    OutlinedTextField(
+                        value = borrador[i],
+                        onValueChange = { borrador[i] = it.take(MAX_CARACTERES) },
+                        label = { Text("${i + 5}") },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
 
         Button(
             onClick = { onGuardar(borrador.map(String::trim)) },
             enabled = borrador.all { it.isNotBlank() },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
         ) { Text("Guardar y enviar a Kalmi") }
 
         if (!conectado) {

@@ -1,5 +1,9 @@
 package cl.kalmi.app.ui.historial
 
+import cl.kalmi.app.ui.theme.tintaTema
+import cl.kalmi.app.ui.TarjetaFranja
+import cl.kalmi.app.ui.Encabezado
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,8 +69,8 @@ fun HistorialContenido(
     val dia = diaElegido?.let(LocalDate::ofEpochDay) ?: hoy
     val eventos = remember(historial, dia) { historial.filter { it.dia() == dia } }
 
-    Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Historial", style = MaterialTheme.typography.headlineSmall)
+    Column(modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Encabezado("Historial")
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(dias) { d ->
@@ -95,18 +99,14 @@ fun HistorialContenido(
 
 @Composable
 private fun FilaEvento(e: Evento) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = e.fondoTema),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    TarjetaFranja(franja = e.colorTema, fondo = MaterialTheme.colorScheme.surfaceContainer) {
         Row(
-            Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(e.hora(), style = MaterialTheme.typography.titleMedium)
-            Column {
-                Text(e.titulo, style = MaterialTheme.typography.titleMedium, color = e.colorTema)
+            Text(e.hora(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(e.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = e.tintaTema)
                 if (e.palabras.isNotEmpty()) {
                     Text("Eligió: " + e.palabras.joinToString(" + "), style = MaterialTheme.typography.bodySmall)
                 }

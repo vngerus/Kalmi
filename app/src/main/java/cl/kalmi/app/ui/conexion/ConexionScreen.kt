@@ -1,5 +1,12 @@
 package cl.kalmi.app.ui.conexion
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.text.font.FontWeight
+import cl.kalmi.app.ui.theme.KalmiColors
+import cl.kalmi.app.ui.CaraKalmi
+import cl.kalmi.app.ui.Encabezado
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.FlowRow
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -109,22 +116,39 @@ fun ConexionContenido(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Conexión", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            when (conexion) {
-                EstadoConexion.Desconectado -> "Desconectado"
-                EstadoConexion.Buscando -> "Buscando Kalmi…"
-                EstadoConexion.Conectando -> "Conectando…"
-                is EstadoConexion.Conectado -> "Conectado a ${conexion.nombre}"
-                is EstadoConexion.Error -> "Error: ${conexion.mensaje}"
-            },
-        )
-        bateria?.let { Text("Batería $it%", style = MaterialTheme.typography.bodyMedium) }
+        Encabezado("Conexión", conexion, bateria)
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
+            Row(
+                Modifier.fillMaxWidth().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                CaraKalmi(if (conectado) KalmiColors.Bien else KalmiColors.Calma, tamano = 64.dp, dormido = !conectado)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        when (conexion) {
+                            EstadoConexion.Desconectado -> "Kalmi no está conectado"
+                            EstadoConexion.Buscando -> "Buscando a Kalmi…"
+                            EstadoConexion.Conectando -> "Conectando…"
+                            is EstadoConexion.Conectado -> conexion.nombre
+                            is EstadoConexion.Error -> conexion.mensaje
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        if (conectado) "Cerca por Bluetooth" + (bateria?.let { " · batería $it%" } ?: "") else "Acércate a Kalmi y toca Conectar",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
 
         if (conectado) {
-            OutlinedButton(onClick = onDesconectar) { Text("Desconectar") }
+            OutlinedButton(onClick = onDesconectar, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Desconectar") }
         } else {
-            Button(onClick = onConectar) { Text("Conectar") }
+            Button(onClick = onConectar, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Conectar") }
         }
         if (explicarPermisos && !conectado) {
             Text(
@@ -133,17 +157,25 @@ fun ConexionContenido(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+
+        Diagnostico(calidad)
+
         modoReal?.let { real ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Switch(checked = real, onCheckedChange = onModoReal)
-                Column {
-                    Text("Usar Kalmi real (HM-10)", style = MaterialTheme.typography.bodyMedium)
-                    Text("Se aplica al reiniciar la app", style = MaterialTheme.typography.bodySmall)
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Usar Kalmi real (HM-10)", style = MaterialTheme.typography.bodyLarge)
+                        Text("Solo pruebas · se aplica al reiniciar la app", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = real, onCheckedChange = onModoReal)
                 }
             }
         }
-
-        Diagnostico(calidad)
 
         if (onSimular != null) PanelDepuracion(conectado, onSimular, onSimularPalabras, perdida, onPerdida)
     }
@@ -182,10 +214,10 @@ private fun PanelDepuracion(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Simulador (solo debug)", style = MaterialTheme.typography.titleMedium)
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            if (!conectado) {
+                Text("Conecta el simulador para probar.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 EMOCIONES_BOTON.forEach { e ->
                     OutlinedButton(onClick = { onSimular(e) }, enabled = conectado) { Text(e.nombre) }
                 }
